@@ -1,19 +1,19 @@
-﻿# Universal LeetCode & Competitive Programming Auto-Solver ⚡
+﻿# CodeFlash ⚡ - Universal AI Code Companion & Instant Typer
 
-An automated Python assistant that listens for a global hotkey (`F8`), reads coding problem statements from your clipboard, uses Gemini AI to generate optimal Java solutions, and automatically types/pastes them into your code editor.
+A high-speed developer automation assistant that listens for a global hotkey (`F8`), captures coding problem statements or code prompts from your clipboard, generates optimal solutions using Gemini AI, and instantly types/pastes them into any code editor or online judge.
 
-## Features
-- **Universal:** Works on LeetCode, HackerRank, CodeChef, Codeforces, GeeksforGeeks, etc.
-- **Continuous Mode:** Runs in the background and solves multiple questions sequentially without restarting.
-- **Instant Insertion:** Inserts solutions into the active editor in milliseconds.
-- **Target Language:** Optimized for clean, judge-ready Java code.
+## ✨ Features
+- **Universal Compatibility:** Works seamlessly across any web platform (LeetCode, HackerRank, CodeChef, Codeforces, IDEs, Web Editors, etc.).
+- **Always-On Continuous Mode:** Runs in the background and processes consecutive tasks without manual restarts.
+- **Ultra-Fast & Human Typing Modes:** Switch between instant single-click pasting or customizable human-speed keystroke simulation.
+- **Multi-Language Support:** Optimized by default for clean, judge-ready code (Java, Python, C++, etc.).
 
-## Setup & Installation
+## 🚀 Setup & Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/leetcode-auto-solver.git
-   cd leetcode-auto-solver
+   git clone https://github.com/YOUR_USERNAME/codeflash.git
+   cd codeflash
    ```
 
 2. **Install dependencies:**
@@ -22,20 +22,20 @@ An automated Python assistant that listens for a global hotkey (`F8`), reads cod
    ```
 
 3. **Configure API Key:**
-   Get a free API key from [Google AI Studio](https://aistudio.google.com) and create `config.json`:
+   Get a free key from [Google AI Studio](https://aistudio.google.com) and create `config.json`:
    ```json
    {
      "api_key": "YOUR_GEMINI_API_KEY"
    }
    ```
 
-## Usage
+## 🎮 Usage
 
-1. Start the solver:
+1. Start the tool:
    ```bash
    python smart_solver.py
    ```
-2. Copy (`Ctrl + C`) any problem description on any website.
-3. Click inside your Java code editor.
+2. Copy (`Ctrl + C`) any problem description or prompt from anywhere.
+3. Focus your target code editor.
 4. Press **`F8`** on your keyboard.
-5. Press `Ctrl + C` in the terminal when you are done.
+5. Press `Ctrl + C` in the terminal when you wish to stop.
