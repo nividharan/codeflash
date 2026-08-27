@@ -1,0 +1,4 @@
+﻿pyautogui>=0.9.54
+pyperclip>=1.9.0
+keyboard>=0.13.5
+google-genai>=2.20.0
