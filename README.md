@@ -3,7 +3,7 @@
 A high-speed developer automation assistant that listens for a global hotkey (`F8`), captures coding problem statements or code prompts from your clipboard, generates optimal solutions using Gemini AI, and instantly types/pastes them into any code editor or online judge.
 
 ## ✨ Features
-- **Universal Compatibility:** Works seamlessly across any web platform (LeetCode, HackerRank, CodeChef, Codeforces, IDEs, Web Editors, etc.).
+- **Universal Compatibility:** Works seamlessly across any web platform, browser coding environment, IDE, and online judge.
 - **Always-On Continuous Mode:** Runs in the background and processes consecutive tasks without manual restarts.
 - **Ultra-Fast & Human Typing Modes:** Switch between instant single-click pasting or customizable human-speed keystroke simulation.
 - **Multi-Language Support:** Optimized by default for clean, judge-ready code (Java, Python, C++, etc.).
@@ -12,7 +12,7 @@ A high-speed developer automation assistant that listens for a global hotkey (`F
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/codeflash.git
+   git clone https://github.com/nividharan/codeflash.git
    cd codeflash
    ```
 
