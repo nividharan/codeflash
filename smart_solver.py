@@ -25,7 +25,13 @@ SUPPORTED_LANGUAGES = ["Java", "Python", "C++", "JavaScript", "TypeScript", "C#"
 TYPING_MODES = ["instant", "ultra", "human"]
 
 # Fallback models in priority order
-MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-3.6-flash"]
+MODELS_TO_TRY = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.7-flash"
+]
 
 # Global state
 state = {
