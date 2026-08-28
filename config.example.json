@@ -1,3 +1,11 @@
-﻿{
-  "api_key": "YOUR_GEMINI_API_KEY_HERE"
+{
+  "api_key": "YOUR_GEMINI_API_KEY_HERE",
+  "target_language": "Java",
+  "typing_mode": "instant",
+  "sound_feedback": true,
+  "paste_delay_seconds": 1.5,
+  "hotkey_vision": "F7",
+  "hotkey_solve": "F8",
+  "hotkey_switch_lang": "F9",
+  "hotkey_switch_mode": "F10"
 }
