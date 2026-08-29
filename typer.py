@@ -42,57 +42,30 @@ def type_code(text: str, mode: str = "instant"):
         time.sleep(0.05)
         pyautogui.hotkey("ctrl", "v")
     elif mode == "ultra":
-        lines = text.split("\n")
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            content = line.strip()
-            if not content:
-                if i < len(lines) - 1:
-                    keyboard.send("enter")
-                    time.sleep(0.05)
-                continue
-
-            keyboard.write(content, delay=0.008)
-            time.sleep(0.05)
-
-            code_no_comment = content.split("//")[0].rstrip()
-            if code_no_comment.endswith("{"):
-                time.sleep(0.04)
-                keyboard.send("delete")
-                time.sleep(0.04)
-
+            keyboard.write(line, delay=0.005)
+            time.sleep(0.04)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.05)
+                time.sleep(0.04)
 
     elif mode == "human":
-        lines = text.split("\n")
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            content = line.strip()
-            if not content:
-                if i < len(lines) - 1:
-                    keyboard.send("enter")
-                    time.sleep(random.uniform(0.08, 0.15))
-                continue
-
-            for char in content:
+            for char in line:
                 keyboard.write(char)
                 if char in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.04, 0.08))
+                    time.sleep(random.uniform(0.03, 0.07))
                 elif char == " ":
-                    time.sleep(random.uniform(0.02, 0.04))
+                    time.sleep(random.uniform(0.015, 0.03))
                 else:
-                    time.sleep(random.uniform(0.01, 0.025))
+                    time.sleep(random.uniform(0.008, 0.02))
 
-            time.sleep(0.05)
-            code_no_comment = content.split("//")[0].rstrip()
-            if code_no_comment.endswith("{"):
-                time.sleep(0.04)
-                keyboard.send("delete")
-                time.sleep(0.04)
-
+            time.sleep(random.uniform(0.04, 0.08))
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(random.uniform(0.08, 0.16))
+                time.sleep(random.uniform(0.06, 0.12))
     else:
         print(f"[!] Unknown mode '{mode}', defaulting to instant paste.")
         pyperclip.copy(text)
