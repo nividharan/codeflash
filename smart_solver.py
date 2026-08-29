@@ -192,34 +192,39 @@ def image_to_genai_part(img: Image.Image) -> types.Part:
 
 
 def insert_code(code: str, mode: str):
-    # Auto-select all in editor to cleanly replace any default boilerplate
+    # Ensure clipboard has the exact code ready
+    pyperclip.copy(code)
+    time.sleep(0.05)
+
+    # Auto-select all in editor to cleanly wipe default starter boilerplate
     if state.get("auto_clear", True):
         pyautogui.hotkey("ctrl", "a")
-        time.sleep(0.06)
+        time.sleep(0.08)
 
     if mode == "instant":
-        pyperclip.copy(code)
+        # Fast atomic paste (immune to editor auto-bracket / auto-indent bugs)
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.04)
+    elif mode == "ultra":
+        # Ultra Anti-Paste Bypass: Uses Shift+Insert and Ctrl+V to bypass website paste blockers
+        pyautogui.hotkey("shift", "insert")
         time.sleep(0.04)
         pyautogui.hotkey("ctrl", "v")
-    elif mode == "ultra":
-        if state.get("auto_clear", True):
-            pyautogui.press("backspace")
-            time.sleep(0.04)
-        # Direct Unicode character typing (bypasses anti-paste clipboard hooks)
-        keyboard.write(code, delay=0.002)
     elif mode == "human":
+        # Human simulation: Line-by-line atomic injection with realistic typing pauses
+        lines = code.split("\n")
         if state.get("auto_clear", True):
             pyautogui.press("backspace")
             time.sleep(0.04)
-        # Cadence-based typing with natural jitter
-        for char in code:
-            keyboard.write(char)
-            if char in ("\n", ";", "{", "}"):
+        for i, line in enumerate(lines):
+            if line:
+                pyperclip.copy(line)
+                time.sleep(0.02)
+                pyautogui.hotkey("ctrl", "v")
+            if i < len(lines) - 1:
                 time.sleep(random.uniform(0.08, 0.20))
-            elif char == " ":
-                time.sleep(random.uniform(0.02, 0.05))
-            else:
-                time.sleep(random.uniform(0.01, 0.03))
+                pyautogui.press("enter")
+                time.sleep(random.uniform(0.04, 0.10))
 
 
 def cycle_language():
