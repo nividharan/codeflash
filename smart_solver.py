@@ -149,16 +149,13 @@ CRITICAL REQUIREMENTS:
 2. For Java:
    - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
    - Include required imports (e.g. `import java.util.*;`).
-   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like `System.out.println(...)` alone. ALWAYS wrap it inside:
-     ```java
+   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like System.out.println alone. ALWAYS wrap it inside a complete class:
      import java.util.*;
-
-     public class Main {
-         public static void main(String[] args) {
+     public class Main {{
+         public static void main(String[] args) {{
              // full solution code
-         }
-     }
-     ```
+         }}
+     }}
    - Ensure all opening and closing braces strictly balance.
 3. For Python: Output complete runnable code.
 4. For C++: Include `#include <iostream>` and `int main()`.
@@ -178,16 +175,13 @@ CRITICAL REQUIREMENTS:
 2. For Java:
    - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
    - Include required imports (e.g. `import java.util.*;`).
-   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like `System.out.println(...)` alone. ALWAYS wrap it inside:
-     ```java
+   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like System.out.println alone. ALWAYS wrap it inside a complete class:
      import java.util.*;
-
-     public class Main {
-         public static void main(String[] args) {
+     public class Main {{
+         public static void main(String[] args) {{
              // full solution code
-         }
-     }
-     ```
+         }}
+     }}
    - Ensure all opening and closing braces strictly balance.
 3. For Python: Output complete runnable code.
 4. For C++: Include `#include <iostream>` and `int main()`.
