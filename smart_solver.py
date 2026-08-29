@@ -39,6 +39,7 @@ state = {
     "mode": "instant",
     "sound": True,
     "delay": 1.5,
+    "auto_clear": True,
     "is_busy": False
 }
 
@@ -68,6 +69,7 @@ def load_config():
         "typing_mode": "instant",
         "sound_feedback": True,
         "paste_delay_seconds": 1.5,
+        "auto_clear_editor": True,
         "hotkey_vision": "F7",
         "hotkey_solve": "F8",
         "hotkey_switch_lang": "F9",
@@ -96,6 +98,7 @@ def load_config():
 
     state["sound"] = bool(config.get("sound_feedback", True))
     state["delay"] = float(config.get("paste_delay_seconds", 1.5))
+    state["auto_clear"] = bool(config.get("auto_clear_editor", True))
 
     return config
 
@@ -139,12 +142,18 @@ def clean_code(raw_text: str, language: str = "") -> str:
 
 def build_text_prompt(problem_text: str, language: str) -> str:
     return f"""You are an expert competitive programmer.
-Solve the following coding problem in {language}.
+Solve the following coding challenge in {language}.
 
-Requirements:
-1. Provide an optimal time and space complexity solution.
-2. Provide ONLY valid {language} solution code suitable for LeetCode / competitive programming platforms (e.g. standard class/function signatures).
-3. Do NOT include markdown explanations, intro/outro, or commentary. Output only raw {language} code.
+CRITICAL REQUIREMENTS:
+1. Provide a COMPLETE, fully self-contained, and 100% working solution in {language}.
+2. For Java:
+   - Include required imports (e.g. `import java.util.*;`).
+   - Write a complete `public class Main` with `public static void main(String[] args)` that reads from standard input (`Scanner` or `BufferedReader`) and prints the required output to standard output (`System.out.println`), OR standard LeetCode class Solution if the prompt explicitly asks for a method/class.
+   - Properly initialize all input readers (e.g. `Scanner scanner = new Scanner(System.in);`).
+   - Ensure all brackets and syntax are perfectly balanced and compilable.
+3. For Python / C++ / other languages:
+   - Provide complete, optimal, judge-ready runnable code.
+4. Output ONLY the raw {language} code. Do NOT include any markdown explanations, commentary, intro, or outro text.
 
 Problem:
 {problem_text}
@@ -153,39 +162,64 @@ Problem:
 
 def build_vision_prompt(language: str) -> str:
     return f"""You are an expert competitive programmer.
-Look at the attached screen image carefully. Identify and solve the coding challenge / algorithmic problem shown on the screen in {language}.
+Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
 
-Requirements:
-1. Provide an optimal time and space complexity solution.
-2. Provide ONLY valid {language} solution code suitable for LeetCode / competitive programming platforms (e.g. standard class or function signatures).
-3. Do NOT include any markdown explanations, commentary, intro/outro, or test harness. Output ONLY raw {language} code.
+CRITICAL REQUIREMENTS:
+1. Provide a COMPLETE, fully self-contained, and 100% working solution in {language}.
+2. For Java:
+   - Include required imports (e.g. `import java.util.*;`).
+   - Write a complete `public class Main` with `public static void main(String[] args)` that reads from standard input (`Scanner` or `BufferedReader`) and prints the required output to standard output (`System.out.println`), OR standard LeetCode class Solution if the prompt explicitly asks for a method/class.
+   - Properly initialize all input readers (e.g. `Scanner scanner = new Scanner(System.in);`).
+   - Ensure all brackets and syntax are perfectly balanced and compilable.
+3. For Python / C++ / other languages:
+   - Provide complete, optimal, judge-ready runnable code.
+4. Output ONLY the raw {language} code. Do NOT include any markdown explanations, commentary, intro, or outro text.
 """
 
 
 def image_to_genai_part(img: Image.Image) -> types.Part:
+    max_dimension = 1280
+    w, h = img.size
+    if max(w, h) > max_dimension:
+        scale = max_dimension / max(w, h)
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
     buf = io.BytesIO()
-    img.convert("RGB").save(buf, format="JPEG", quality=85)
+    img.convert("RGB").save(buf, format="JPEG", quality=75, optimize=True)
     return types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
 
 
 def insert_code(code: str, mode: str):
+    # Auto-select all in editor to cleanly replace any default boilerplate
+    if state.get("auto_clear", True):
+        pyautogui.hotkey("ctrl", "a")
+        time.sleep(0.06)
+
     if mode == "instant":
         pyperclip.copy(code)
-        time.sleep(0.05)
+        time.sleep(0.04)
         pyautogui.hotkey("ctrl", "v")
     elif mode == "ultra":
+        if state.get("auto_clear", True):
+            pyautogui.press("backspace")
+            time.sleep(0.04)
         # Direct Unicode character typing (bypasses anti-paste clipboard hooks)
-        keyboard.write(code, delay=0.003)
+        keyboard.write(code, delay=0.002)
     elif mode == "human":
-        # Cadence-based typing with natural jitter and pause after statements
+        if state.get("auto_clear", True):
+            pyautogui.press("backspace")
+            time.sleep(0.04)
+        # Cadence-based typing with natural jitter
         for char in code:
             keyboard.write(char)
             if char in ("\n", ";", "{", "}"):
-                time.sleep(random.uniform(0.10, 0.25))
+                time.sleep(random.uniform(0.08, 0.20))
             elif char == " ":
-                time.sleep(random.uniform(0.02, 0.06))
+                time.sleep(random.uniform(0.02, 0.05))
             else:
-                time.sleep(random.uniform(0.015, 0.04))
+                time.sleep(random.uniform(0.01, 0.03))
 
 
 def cycle_language():
@@ -224,13 +258,21 @@ def solve_with_gemini(client, contents, prompt_desc: str):
     response = None
     last_error = None
 
-    for model_name in MODELS_TO_TRY:
+    gen_config = types.GenerateContentConfig(
+        temperature=0.1,
+        max_output_tokens=2048
+    )
+
+    for i, model_name in enumerate(MODELS_TO_TRY):
         try:
             response = client.models.generate_content(
                 model=model_name,
                 contents=contents,
+                config=gen_config
             )
             if response and response.text:
+                if i > 0:
+                    MODELS_TO_TRY.insert(0, MODELS_TO_TRY.pop(i))
                 print(f"[✓] Solved using model: {model_name}")
                 break
         except Exception as e:
@@ -349,6 +391,7 @@ def print_banner(config: dict):
     print(f"  • Typing Profile:        [ {state['mode'].upper()} ]  (Press {config.get('hotkey_switch_mode', 'F10')} to switch)")
     print(f"  • Vision Solve (Screen): [ {config.get('hotkey_vision', 'F7')} ] ──▶ (Zero Copying Needed!)")
     print(f"  • Solve from Clipboard:  [ {config.get('hotkey_solve', 'F8')} ] ──▶ (Text or Win+Shift+S Snip)")
+    print(f"  • Auto-Replace Editor:   [ {'ON' if state['auto_clear'] else 'OFF'} ]")
     print(f"  • Sound Feedback:        [ {'ON' if state['sound'] else 'OFF'} ]")
     print("-" * 70)
     print("How to use:")
