@@ -145,15 +145,24 @@ def build_text_prompt(problem_text: str, language: str) -> str:
 Solve the following coding challenge in {language}.
 
 CRITICAL REQUIREMENTS:
-1. Provide a COMPLETE, fully self-contained, and 100% working solution in {language}.
+1. Provide a COMPLETE, fully self-contained, and 100% runnable program in {language}.
 2. For Java:
+   - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
    - Include required imports (e.g. `import java.util.*;`).
-   - Write a complete `public class Main` with `public static void main(String[] args)` that reads from standard input (`Scanner` or `BufferedReader`) and prints the required output to standard output (`System.out.println`), OR standard LeetCode class Solution if the prompt explicitly asks for a method/class.
-   - Properly initialize all input readers (e.g. `Scanner scanner = new Scanner(System.in);`).
-   - Ensure all brackets and syntax are perfectly balanced and compilable.
-3. For Python / C++ / other languages:
-   - Provide complete, optimal, judge-ready runnable code.
-4. Output ONLY the raw {language} code. Do NOT include any markdown explanations, commentary, intro, or outro text.
+   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like `System.out.println(...)` alone. ALWAYS wrap it inside:
+     ```java
+     import java.util.*;
+
+     public class Main {
+         public static void main(String[] args) {
+             // full solution code
+         }
+     }
+     ```
+   - Ensure all opening and closing braces strictly balance.
+3. For Python: Output complete runnable code.
+4. For C++: Include `#include <iostream>` and `int main()`.
+5. Output ONLY the raw {language} code. Do NOT include markdown explanations, commentary, intro, or outro text.
 
 Problem:
 {problem_text}
@@ -165,15 +174,24 @@ def build_vision_prompt(language: str) -> str:
 Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
 
 CRITICAL REQUIREMENTS:
-1. Provide a COMPLETE, fully self-contained, and 100% working solution in {language}.
+1. Provide a COMPLETE, fully self-contained, and 100% runnable program in {language}.
 2. For Java:
+   - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
    - Include required imports (e.g. `import java.util.*;`).
-   - Write a complete `public class Main` with `public static void main(String[] args)` that reads from standard input (`Scanner` or `BufferedReader`) and prints the required output to standard output (`System.out.println`), OR standard LeetCode class Solution if the prompt explicitly asks for a method/class.
-   - Properly initialize all input readers (e.g. `Scanner scanner = new Scanner(System.in);`).
-   - Ensure all brackets and syntax are perfectly balanced and compilable.
-3. For Python / C++ / other languages:
-   - Provide complete, optimal, judge-ready runnable code.
-4. Output ONLY the raw {language} code. Do NOT include any markdown explanations, commentary, intro, or outro text.
+   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like `System.out.println(...)` alone. ALWAYS wrap it inside:
+     ```java
+     import java.util.*;
+
+     public class Main {
+         public static void main(String[] args) {
+             // full solution code
+         }
+     }
+     ```
+   - Ensure all opening and closing braces strictly balance.
+3. For Python: Output complete runnable code.
+4. For C++: Include `#include <iostream>` and `int main()`.
+5. Output ONLY the raw {language} code. Do NOT include markdown explanations, commentary, intro, or outro text.
 """
 
 
