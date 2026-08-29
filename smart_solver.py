@@ -242,31 +242,31 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Keystroke Engine: Line-by-line paced typing (prevents browser dropping keystrokes)
+        # Ultra Engine: Paste each line via clipboard to bypass auto-bracket/auto-indent
+        # web editor interference that corrupts per-character keystroke injection
         lines = code.split("\n")
         for i, line in enumerate(lines):
-            if line:
-                keyboard.write(line, delay=0.005)
+            # Copy just this line to clipboard and paste it atomically
+            pyperclip.copy(line)
+            time.sleep(0.04)
+            pyautogui.hotkey("ctrl", "v")
+            time.sleep(0.04)
+            # Press Enter to go to next line (avoid editor auto-enter handling)
             if i < len(lines) - 1:
-                time.sleep(0.02)
                 pyautogui.press("enter")
-                time.sleep(0.02)
+                time.sleep(0.03)
 
     elif mode == "human":
-        # Realistic Human Keystroke Engine with natural typing cadence
+        # Human Engine: Same line-by-clipboard approach with random delays per line
         lines = code.split("\n")
         for i, line in enumerate(lines):
-            for char in line:
-                keyboard.write(char)
-                if char in (";", "{", "}"):
-                    time.sleep(random.uniform(0.06, 0.16))
-                elif char == " ":
-                    time.sleep(random.uniform(0.015, 0.04))
-                else:
-                    time.sleep(random.uniform(0.008, 0.025))
+            pyperclip.copy(line)
+            time.sleep(0.03)
+            pyautogui.hotkey("ctrl", "v")
+            time.sleep(random.uniform(0.05, 0.15))
             if i < len(lines) - 1:
                 pyautogui.press("enter")
-                time.sleep(random.uniform(0.05, 0.12))
+                time.sleep(random.uniform(0.08, 0.20))
 
 
 def cycle_language():
