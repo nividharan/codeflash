@@ -36,7 +36,7 @@ MODELS_TO_TRY = [
 # Global state
 state = {
     "language": "Java",
-    "mode": "instant",
+    "mode": "ultra",
     "sound": True,
     "delay": 1.5,
     "auto_clear": True,
@@ -241,16 +241,14 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Keystroke Engine: Paced line-by-line typing with 80ms post-Enter DOM buffer
+        # Ultra Keystroke Engine: Fast atomic line typing with safe 50ms post-Enter buffer
         lines = [l.strip() for l in code.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            for char in line:
-                keyboard.write(char, exact=True)
-                time.sleep(0.003)
+            keyboard.write(line, delay=0.0015, exact=True)
+            time.sleep(0.02)
             if i < len(lines) - 1:
-                time.sleep(0.03)
                 keyboard.send("enter")
-                time.sleep(0.08)  # Critical 80ms pause for browser to create newline & auto-indent
+                time.sleep(0.05)
 
     elif mode == "human":
         # Realistic Human Keystroke Engine with natural typing cadence
