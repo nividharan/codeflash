@@ -24,12 +24,12 @@ CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 SUPPORTED_LANGUAGES = ["Java", "Python", "C++", "JavaScript", "TypeScript", "C#", "Go"]
 TYPING_MODES = ["instant", "ultra", "human"]
 
-# Fallback models in priority order
+# Fallback models in priority order (active and tested on API)
 MODELS_TO_TRY = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-flash-lite-latest",
     "gemini-3.7-flash"
 ]
 
@@ -345,7 +345,7 @@ def solve_with_gemini(client, contents, prompt_desc: str):
     gen_config = types.GenerateContentConfig(
         temperature=0.0,
         max_output_tokens=2048,
-        system_instruction="You are an expert competitive programmer. You must ONLY output raw valid source code without any conversational text, reasoning notes, or explanations."
+        system_instruction=f"You are an expert competitive programmer. Solve the problem in {lang}. You must ONLY output the {lang} source code inside a single ```{lang.lower()} ``` code block. Do NOT write any explanations, thinking steps, mathematical scratchpad notes, sample walkthroughs, or commentary before or after the code block."
     )
 
     for i, model_name in enumerate(MODELS_TO_TRY):
