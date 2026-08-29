@@ -161,7 +161,7 @@ def clean_code(raw_text: str, language: str = "") -> str:
     for line in text.splitlines():
         trimmed = line.strip()
         # Skip comment-only lines
-        if trimmed.startswith("//") or trimmed.startswith("*") or trimmed.startswith("/*"):
+        if trimmed.startswith("//") or trimmed.startswith("/*"):
             continue
         if is_python and trimmed.startswith("#"):
             continue
