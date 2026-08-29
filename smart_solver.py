@@ -131,30 +131,43 @@ def clean_code(raw_text: str, language: str = "") -> str:
     if blocks:
         best = max(blocks, key=lambda b: len(b.strip()))
         if len(best.strip()) > 10:
-            return best.strip()
-
-    # 2. If contains ``` but unclosed
-    if "```" in text:
+            text = best.strip()
+    elif "```" in text:
         parts = text.split("```")
         if len(parts) >= 2:
             code_candidate = parts[1]
             lines = code_candidate.splitlines()
             if lines and not lines[0].strip().endswith(";"):
                 lines = lines[1:]
-            return "\n".join(lines).strip()
+            text = "\n".join(lines).strip()
+    else:
+        # Fallback: Find code start keyword if commentary is present
+        lines = text.splitlines()
+        start_idx = -1
+        for i, line in enumerate(lines):
+            l = line.strip()
+            if l.startswith(("import ", "package ", "public class ", "class ", "#include", "def ", "using ")):
+                start_idx = i
+                break
+        if start_idx != -1:
+            text = "\n".join(lines[start_idx:]).strip()
 
-    # 3. Fallback: Find code start keyword if commentary is present
-    lines = text.splitlines()
-    start_idx = -1
-    for i, line in enumerate(lines):
-        l = line.strip()
-        if l.startswith(("import ", "package ", "public class ", "class ", "#include", "def ", "using ")):
-            start_idx = i
-            break
-    if start_idx != -1:
-        return "\n".join(lines[start_idx:]).strip()
+    # 2. Remove multi-line block comments /* ... */
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
 
-    return text
+    # 3. Filter out single-line comments (// and #) that the AI dumps its thought process into
+    is_python = (language or state.get("language", "")).lower() == "python"
+    clean_lines = []
+    for line in text.splitlines():
+        trimmed = line.strip()
+        # Skip comment-only lines
+        if trimmed.startswith("//") or trimmed.startswith("*") or trimmed.startswith("/*"):
+            continue
+        if is_python and trimmed.startswith("#"):
+            continue
+        clean_lines.append(line)
+
+    return "\n".join(clean_lines).strip()
 
 
 def build_text_prompt(problem_text: str, language: str) -> str:
@@ -166,17 +179,10 @@ CRITICAL REQUIREMENTS:
 2. For Java:
    - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
    - Include required imports (e.g. `import java.util.*;`).
-   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like System.out.println alone. ALWAYS wrap it inside a complete class:
-     import java.util.*;
-     public class Main {{
-         public static void main(String[] args) {{
-             // full solution code
-         }}
-     }}
    - Ensure all opening and closing braces strictly balance.
 3. For Python: Output complete runnable code.
 4. For C++: Include `#include <iostream>` and `int main()`.
-5. Output ONLY the raw {language} code. Do NOT include markdown explanations, commentary, intro, or outro text.
+5. STRICTLY FORBIDDEN: Do NOT write ANY comments (no `//` or `/* */`), no explanations, no thought process, and no reasoning notes. Output ONLY pure executable code statements.
 
 Problem:
 {problem_text}
@@ -192,17 +198,10 @@ CRITICAL REQUIREMENTS:
 2. For Java:
    - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
    - Include required imports (e.g. `import java.util.*;`).
-   - Even if the task is a simple single-line print or basic math, NEVER output an isolated statement like System.out.println alone. ALWAYS wrap it inside a complete class:
-     import java.util.*;
-     public class Main {{
-         public static void main(String[] args) {{
-             // full solution code
-         }}
-     }}
    - Ensure all opening and closing braces strictly balance.
 3. For Python: Output complete runnable code.
 4. For C++: Include `#include <iostream>` and `int main()`.
-5. Output ONLY the raw {language} code. Do NOT include markdown explanations, commentary, intro, or outro text.
+5. STRICTLY FORBIDDEN: Do NOT write ANY comments (no `//` or `/* */`), no explanations, no thought process, and no reasoning notes. Output ONLY pure executable code statements.
 """
 
 
@@ -344,8 +343,8 @@ def solve_with_gemini(client, contents, prompt_desc: str):
 
     gen_config = types.GenerateContentConfig(
         temperature=0.0,
-        max_output_tokens=2048,
-        system_instruction=f"You are an expert competitive programmer. Solve the problem in {lang}. You must ONLY output the {lang} source code inside a single ```{lang.lower()} ``` code block. Do NOT write any explanations, thinking steps, mathematical scratchpad notes, sample walkthroughs, or commentary before or after the code block."
+        max_output_tokens=4096,
+        system_instruction=f"You are an expert competitive programmer. Solve the problem in {lang}. You must ONLY output the {lang} source code inside a single ```{lang.lower()} ``` code block. Do NOT write any explanations, thinking steps, mathematical scratchpad notes, sample walkthroughs, or commentary. NEVER write any comments (no `//` or `/* */`) in the code. Output pure executable statements only."
     )
 
     for i, model_name in enumerate(MODELS_TO_TRY):
