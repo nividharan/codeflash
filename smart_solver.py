@@ -192,39 +192,41 @@ def image_to_genai_part(img: Image.Image) -> types.Part:
 
 
 def insert_code(code: str, mode: str):
-    # Ensure clipboard has the exact code ready
-    pyperclip.copy(code)
-    time.sleep(0.05)
+    # Ensure clipboard also has the code as backup
+    try:
+        pyperclip.copy(code)
+    except Exception:
+        pass
+    time.sleep(0.04)
 
-    # Auto-select all in editor to cleanly wipe default starter boilerplate
+    # 1. Clear existing template code in the editor completely
     if state.get("auto_clear", True):
         pyautogui.hotkey("ctrl", "a")
         time.sleep(0.08)
+        pyautogui.press("backspace")
+        time.sleep(0.06)
 
+    # 2. Insert code based on selected mode
     if mode == "instant":
-        # Fast atomic paste (immune to editor auto-bracket / auto-indent bugs)
+        # Fast atomic paste (for sites that allow Ctrl+V)
         pyautogui.hotkey("ctrl", "v")
         time.sleep(0.04)
+
     elif mode == "ultra":
-        # Ultra Anti-Paste Bypass: Uses Shift+Insert and Ctrl+V to bypass website paste blockers
-        pyautogui.hotkey("shift", "insert")
-        time.sleep(0.04)
-        pyautogui.hotkey("ctrl", "v")
+        # Ultra Fast Keystroke Engine (Bypasses Talentely / Mettl paste blocks)
+        # Sends native Windows Unicode hardware events directly into the active editor
+        keyboard.write(code, delay=0.001)
+
     elif mode == "human":
-        # Human simulation: Line-by-line atomic injection with realistic typing pauses
-        lines = code.split("\n")
-        if state.get("auto_clear", True):
-            pyautogui.press("backspace")
-            time.sleep(0.04)
-        for i, line in enumerate(lines):
-            if line:
-                pyperclip.copy(line)
-                time.sleep(0.02)
-                pyautogui.hotkey("ctrl", "v")
-            if i < len(lines) - 1:
-                time.sleep(random.uniform(0.08, 0.20))
-                pyautogui.press("enter")
-                time.sleep(random.uniform(0.04, 0.10))
+        # Realistic Human Keystroke Engine with natural typing cadence
+        for char in code:
+            keyboard.write(char)
+            if char in ("\n", ";", "{", "}"):
+                time.sleep(random.uniform(0.06, 0.16))
+            elif char == " ":
+                time.sleep(random.uniform(0.015, 0.04))
+            else:
+                time.sleep(random.uniform(0.008, 0.025))
 
 
 def cycle_language():
