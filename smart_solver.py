@@ -242,31 +242,57 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Engine: Paste each line via clipboard to bypass auto-bracket/auto-indent
-        # web editor interference that corrupts per-character keystroke injection
+        # Ultra Anti-Auto-Bracket Engine:
+        # Types char-by-char but immediately presses Delete after every auto-bracketing character
+        # to neutralize the editor's auto-inserted closing bracket before typing continues.
+        AUTO_CLOSE = {"{": "}", "(": ")", "[": "]", '"': '"', "'": "'"}
         lines = code.split("\n")
         for i, line in enumerate(lines):
-            # Copy just this line to clipboard and paste it atomically
-            pyperclip.copy(line)
-            time.sleep(0.04)
-            pyautogui.hotkey("ctrl", "v")
-            time.sleep(0.04)
-            # Press Enter to go to next line (avoid editor auto-enter handling)
+            j = 0
+            while j < len(line):
+                ch = line[j]
+                keyboard.write(ch)
+                time.sleep(0.005)
+                # If editor auto-inserts a closing pair, neutralize it
+                if ch in AUTO_CLOSE:
+                    # Check if next char in our code is the closing match
+                    next_ch = line[j + 1] if j + 1 < len(line) else None
+                    if next_ch != AUTO_CLOSE[ch]:
+                        # Editor likely auto-inserted; delete the unwanted closing bracket
+                        time.sleep(0.02)
+                        pyautogui.press("delete")
+                        time.sleep(0.01)
+                j += 1
             if i < len(lines) - 1:
+                time.sleep(0.02)
                 pyautogui.press("enter")
-                time.sleep(0.03)
+                time.sleep(0.02)
 
     elif mode == "human":
-        # Human Engine: Same line-by-clipboard approach with random delays per line
+        # Human Anti-Auto-Bracket Engine: same approach with natural timing
+        AUTO_CLOSE = {"{": "}", "(": ")", "[": "]", '"': '"', "'": "'"}
         lines = code.split("\n")
         for i, line in enumerate(lines):
-            pyperclip.copy(line)
-            time.sleep(0.03)
-            pyautogui.hotkey("ctrl", "v")
-            time.sleep(random.uniform(0.05, 0.15))
+            j = 0
+            while j < len(line):
+                ch = line[j]
+                keyboard.write(ch)
+                if ch in (";", "{", "}", "(", ")"):
+                    time.sleep(random.uniform(0.06, 0.14))
+                elif ch == " ":
+                    time.sleep(random.uniform(0.015, 0.04))
+                else:
+                    time.sleep(random.uniform(0.008, 0.025))
+                if ch in AUTO_CLOSE:
+                    next_ch = line[j + 1] if j + 1 < len(line) else None
+                    if next_ch != AUTO_CLOSE[ch]:
+                        time.sleep(0.02)
+                        pyautogui.press("delete")
+                        time.sleep(0.01)
+                j += 1
             if i < len(lines) - 1:
                 pyautogui.press("enter")
-                time.sleep(random.uniform(0.08, 0.20))
+                time.sleep(random.uniform(0.08, 0.18))
 
 
 def cycle_language():
