@@ -42,30 +42,21 @@ def type_code(text: str, mode: str = "instant"):
         time.sleep(0.05)
         pyautogui.hotkey("ctrl", "v")
     elif mode == "ultra":
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
-        for i, line in enumerate(lines):
-            keyboard.write(line, delay=0.005)
-            time.sleep(0.04)
-            if i < len(lines) - 1:
-                keyboard.send("enter")
-                time.sleep(0.04)
+        clean_code_str = "\n".join([l.strip() for l in text.splitlines() if l.strip()])
+        keyboard.write(clean_code_str, delay=0.003, exact=True)
 
     elif mode == "human":
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
-        for i, line in enumerate(lines):
-            for char in line:
-                keyboard.write(char)
-                if char in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.03, 0.07))
-                elif char == " ":
-                    time.sleep(random.uniform(0.015, 0.03))
-                else:
-                    time.sleep(random.uniform(0.008, 0.02))
-
-            time.sleep(random.uniform(0.04, 0.08))
-            if i < len(lines) - 1:
-                keyboard.send("enter")
-                time.sleep(random.uniform(0.06, 0.12))
+        clean_code_str = "\n".join([l.strip() for l in text.splitlines() if l.strip()])
+        for char in clean_code_str:
+            keyboard.write(char, exact=True)
+            if char == "\n":
+                time.sleep(random.uniform(0.06, 0.14))
+            elif char in (";", "{", "}", "(", ")"):
+                time.sleep(random.uniform(0.03, 0.07))
+            elif char == " ":
+                time.sleep(random.uniform(0.012, 0.03))
+            else:
+                time.sleep(random.uniform(0.005, 0.018))
     else:
         print(f"[!] Unknown mode '{mode}', defaulting to instant paste.")
         pyperclip.copy(text)

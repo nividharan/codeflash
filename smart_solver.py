@@ -241,32 +241,24 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Keystroke Engine: Clean line-by-line typing with Ace Editor auto-indent sync
-        lines = [l.strip() for l in code.splitlines() if l.strip()]
-        for i, line in enumerate(lines):
-            keyboard.write(line, delay=0.005)
-            time.sleep(0.04)
-            if i < len(lines) - 1:
-                keyboard.send("enter")
-                time.sleep(0.04)
+        # Ultra Keystroke Engine: Direct Unicode stream typing with native newlines
+        # Formats code cleanly and writes directly via OS SendInput packets
+        clean_code_str = "\n".join([l.strip() for l in code.splitlines() if l.strip()])
+        keyboard.write(clean_code_str, delay=0.003, exact=True)
 
     elif mode == "human":
-        # Realistic Human Keystroke Engine: Clean character cadence without destructive delete keys
-        lines = [l.strip() for l in code.splitlines() if l.strip()]
-        for i, line in enumerate(lines):
-            for char in line:
-                keyboard.write(char)
-                if char in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.03, 0.07))
-                elif char == " ":
-                    time.sleep(random.uniform(0.015, 0.03))
-                else:
-                    time.sleep(random.uniform(0.008, 0.02))
-
-            time.sleep(random.uniform(0.04, 0.08))
-            if i < len(lines) - 1:
-                keyboard.send("enter")
-                time.sleep(random.uniform(0.06, 0.12))
+        # Realistic Human Keystroke Engine with natural typing cadence
+        clean_code_str = "\n".join([l.strip() for l in code.splitlines() if l.strip()])
+        for char in clean_code_str:
+            keyboard.write(char, exact=True)
+            if char == "\n":
+                time.sleep(random.uniform(0.06, 0.14))
+            elif char in (";", "{", "}", "(", ")"):
+                time.sleep(random.uniform(0.03, 0.07))
+            elif char == " ":
+                time.sleep(random.uniform(0.012, 0.03))
+            else:
+                time.sleep(random.uniform(0.005, 0.018))
 
 
 def cycle_language():
