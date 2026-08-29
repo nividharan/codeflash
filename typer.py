@@ -42,18 +42,56 @@ def type_code(text: str, mode: str = "instant"):
         time.sleep(0.05)
         pyautogui.hotkey("ctrl", "v")
     elif mode == "ultra":
-        # Ultra fast Unicode keystrokes (bypasses anti-paste systems)
-        keyboard.write(text, delay=0.003)
+        lines = text.split("\n")
+        for i, line in enumerate(lines):
+            content = line.strip()
+            if not content:
+                if i < len(lines) - 1:
+                    pyautogui.press("enter")
+                    time.sleep(0.02)
+                continue
+
+            keyboard.write(content, delay=0.003)
+            time.sleep(0.02)
+
+            code_no_comment = content.split("//")[0].rstrip()
+            if code_no_comment.endswith("{"):
+                time.sleep(0.02)
+                pyautogui.press("delete")
+                time.sleep(0.01)
+
+            if i < len(lines) - 1:
+                pyautogui.press("enter")
+                time.sleep(0.02)
+
     elif mode == "human":
-        # Natural human typing simulation
-        for char in text:
-            keyboard.write(char)
-            if char in ("\n", ";", "{", "}"):
-                time.sleep(random.uniform(0.10, 0.25))
-            elif char == " ":
-                time.sleep(random.uniform(0.02, 0.06))
-            else:
-                time.sleep(random.uniform(0.015, 0.04))
+        lines = text.split("\n")
+        for i, line in enumerate(lines):
+            content = line.strip()
+            if not content:
+                if i < len(lines) - 1:
+                    pyautogui.press("enter")
+                    time.sleep(random.uniform(0.05, 0.12))
+                continue
+
+            for char in content:
+                keyboard.write(char)
+                if char in (";", "{", "}", "(", ")"):
+                    time.sleep(random.uniform(0.04, 0.10))
+                elif char == " ":
+                    time.sleep(random.uniform(0.015, 0.04))
+                else:
+                    time.sleep(random.uniform(0.008, 0.025))
+
+            code_no_comment = content.split("//")[0].rstrip()
+            if code_no_comment.endswith("{"):
+                time.sleep(0.03)
+                pyautogui.press("delete")
+                time.sleep(0.02)
+
+            if i < len(lines) - 1:
+                pyautogui.press("enter")
+                time.sleep(random.uniform(0.06, 0.15))
     else:
         print(f"[!] Unknown mode '{mode}', defaulting to instant paste.")
         pyperclip.copy(text)

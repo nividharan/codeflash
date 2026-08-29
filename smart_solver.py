@@ -242,67 +242,72 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Anti-Auto-Bracket Engine:
-        # After typing an auto-closing char, waits 100ms for browser to render
-        # the auto-inserted closing bracket, then presses End+Backspace (for {)
-        # or Delete (for other openers) to neutralize it.
-        AUTO_CLOSE = {"{": "}", "(": ")", "[": "]", '"': '"', "'": "'"}
+        # Ultra Keystroke Engine with Ace Editor Auto-Bracket & Auto-Indent Sync
         lines = code.split("\n")
+        lang = state.get("language", "Java").lower()
+        is_c_style = lang not in ("python",)
+
         for i, line in enumerate(lines):
-            j = 0
-            while j < len(line):
-                ch = line[j]
-                keyboard.write(ch)
-                time.sleep(0.006)
-                if ch in AUTO_CLOSE:
-                    next_ch = line[j + 1] if j + 1 < len(line) else None
-                    if next_ch != AUTO_CLOSE[ch]:
-                        time.sleep(0.1)   # wait for browser to auto-insert closing bracket
-                        if ch == "{":
-                            # { is always end-of-line; End then Backspace removes auto-}
-                            pyautogui.press("end")
-                            time.sleep(0.03)
-                            pyautogui.press("backspace")
-                        else:
-                            # For ( [ " ' — cursor is right before auto-close, Delete removes it
-                            pyautogui.press("delete")
-                        time.sleep(0.03)
-                j += 1
+            # For C-style languages (Java, C++, JS, TS, C#, Go), strip leading spaces
+            # because Ace Editor automatically maintains correct block indentation on Enter.
+            content = line.strip() if is_c_style else line.rstrip()
+
+            if not content:
+                if i < len(lines) - 1:
+                    pyautogui.press("enter")
+                    time.sleep(0.02)
+                continue
+
+            # Type the line with fast, reliable hardware keystrokes
+            keyboard.write(content, delay=0.003)
+            time.sleep(0.02)
+
+            # When a line ends with '{', Ace editor automatically auto-inserts '}' right after the cursor.
+            # Pressing 'Delete' immediately removes that extra '}' before pressing Enter,
+            # keeping the opening '{' perfectly in place and preventing duplicate closing braces!
+            code_no_comment = content.split("//")[0].rstrip()
+            if code_no_comment.endswith("{"):
+                time.sleep(0.02)
+                pyautogui.press("delete")
+                time.sleep(0.01)
+
             if i < len(lines) - 1:
-                time.sleep(0.03)
                 pyautogui.press("enter")
-                time.sleep(0.03)
+                time.sleep(0.02)
 
     elif mode == "human":
-        # Human Anti-Auto-Bracket Engine: same approach with natural timing
-        AUTO_CLOSE = {"{": "}", "(": ")", "[": "]", '"': '"', "'": "'"}
+        # Realistic Human Keystroke Engine with natural typing cadence
         lines = code.split("\n")
+        lang = state.get("language", "Java").lower()
+        is_c_style = lang not in ("python",)
+
         for i, line in enumerate(lines):
-            j = 0
-            while j < len(line):
-                ch = line[j]
-                keyboard.write(ch)
-                if ch in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.06, 0.14))
-                elif ch == " ":
+            content = line.strip() if is_c_style else line.rstrip()
+
+            if not content:
+                if i < len(lines) - 1:
+                    pyautogui.press("enter")
+                    time.sleep(random.uniform(0.05, 0.12))
+                continue
+
+            for char in content:
+                keyboard.write(char)
+                if char in (";", "{", "}", "(", ")"):
+                    time.sleep(random.uniform(0.04, 0.10))
+                elif char == " ":
                     time.sleep(random.uniform(0.015, 0.04))
                 else:
                     time.sleep(random.uniform(0.008, 0.025))
-                if ch in AUTO_CLOSE:
-                    next_ch = line[j + 1] if j + 1 < len(line) else None
-                    if next_ch != AUTO_CLOSE[ch]:
-                        time.sleep(0.1)   # wait for browser to auto-insert
-                        if ch == "{":
-                            pyautogui.press("end")
-                            time.sleep(0.03)
-                            pyautogui.press("backspace")
-                        else:
-                            pyautogui.press("delete")
-                        time.sleep(0.03)
-                j += 1
+
+            code_no_comment = content.split("//")[0].rstrip()
+            if code_no_comment.endswith("{"):
+                time.sleep(0.03)
+                pyautogui.press("delete")
+                time.sleep(0.02)
+
             if i < len(lines) - 1:
                 pyautogui.press("enter")
-                time.sleep(random.uniform(0.08, 0.18))
+                time.sleep(random.uniform(0.06, 0.15))
 
 
 def cycle_language():
