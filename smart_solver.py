@@ -125,18 +125,35 @@ def get_api_key(config: dict) -> str:
 
 def clean_code(raw_text: str, language: str = "") -> str:
     text = raw_text.strip()
-    # Match markdown code fences like ```python\n...\n``` or ```java\n...\n```
-    match = re.search(r"```[a-zA-Z0-9_\+\#-]*\s*\r?\n(.*?)\r?\n```", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    match = re.search(r"```[a-zA-Z0-9_\+\#-]*\s*(.*?)\s*```", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        start = 1 if lines[0].startswith("```") else 0
-        end = len(lines) - 1 if lines and lines[-1].strip().startswith("```") else len(lines)
-        return "\n".join(lines[start:end]).strip()
+    
+    # 1. Match all ``` code blocks and pick the largest one (the actual solution code)
+    blocks = re.findall(r"```(?:[a-zA-Z0-9_\+\#-]*\s*\r?\n)?(.*?)\r?\n```", text, re.DOTALL)
+    if blocks:
+        best = max(blocks, key=lambda b: len(b.strip()))
+        if len(best.strip()) > 10:
+            return best.strip()
+
+    # 2. If contains ``` but unclosed
+    if "```" in text:
+        parts = text.split("```")
+        if len(parts) >= 2:
+            code_candidate = parts[1]
+            lines = code_candidate.splitlines()
+            if lines and not lines[0].strip().endswith(";"):
+                lines = lines[1:]
+            return "\n".join(lines).strip()
+
+    # 3. Fallback: Find code start keyword if commentary is present
+    lines = text.splitlines()
+    start_idx = -1
+    for i, line in enumerate(lines):
+        l = line.strip()
+        if l.startswith(("import ", "package ", "public class ", "class ", "#include", "def ", "using ")):
+            start_idx = i
+            break
+    if start_idx != -1:
+        return "\n".join(lines[start_idx:]).strip()
+
     return text
 
 
@@ -289,8 +306,9 @@ def solve_with_gemini(client, contents, prompt_desc: str):
     last_error = None
 
     gen_config = types.GenerateContentConfig(
-        temperature=0.1,
-        max_output_tokens=2048
+        temperature=0.0,
+        max_output_tokens=2048,
+        system_instruction="You are an expert competitive programmer. You must ONLY output raw valid source code without any conversational text, reasoning notes, or explanations."
     )
 
     for i, model_name in enumerate(MODELS_TO_TRY):
