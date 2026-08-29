@@ -44,11 +44,11 @@ def type_code(text: str, mode: str = "instant"):
     elif mode == "ultra":
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            keyboard.write(line, delay=0.0015, exact=True)
-            time.sleep(0.02)
+            keyboard.write(line, delay=0.008, exact=True)
+            time.sleep(0.03)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.05)
+                time.sleep(0.10)
 
     elif mode == "human":
         lines = [l.strip() for l in text.splitlines() if l.strip()]

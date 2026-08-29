@@ -241,14 +241,14 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Keystroke Engine: Fast atomic line typing with safe 50ms post-Enter buffer
+        # Ultra Keystroke Engine: 8ms/char with 100ms post-Enter to prevent SendInput buffer overflow
         lines = [l.strip() for l in code.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            keyboard.write(line, delay=0.0015, exact=True)
-            time.sleep(0.02)
+            keyboard.write(line, delay=0.008, exact=True)
+            time.sleep(0.03)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.05)
+                time.sleep(0.10)
 
     elif mode == "human":
         # Realistic Human Keystroke Engine with natural typing cadence
