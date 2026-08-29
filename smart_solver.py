@@ -243,8 +243,9 @@ def insert_code(code: str, mode: str):
 
     elif mode == "ultra":
         # Ultra Anti-Auto-Bracket Engine:
-        # Types char-by-char but immediately presses Delete after every auto-bracketing character
-        # to neutralize the editor's auto-inserted closing bracket before typing continues.
+        # After typing an auto-closing char, waits 100ms for browser to render
+        # the auto-inserted closing bracket, then presses End+Backspace (for {)
+        # or Delete (for other openers) to neutralize it.
         AUTO_CLOSE = {"{": "}", "(": ")", "[": "]", '"': '"', "'": "'"}
         lines = code.split("\n")
         for i, line in enumerate(lines):
@@ -252,21 +253,25 @@ def insert_code(code: str, mode: str):
             while j < len(line):
                 ch = line[j]
                 keyboard.write(ch)
-                time.sleep(0.005)
-                # If editor auto-inserts a closing pair, neutralize it
+                time.sleep(0.006)
                 if ch in AUTO_CLOSE:
-                    # Check if next char in our code is the closing match
                     next_ch = line[j + 1] if j + 1 < len(line) else None
                     if next_ch != AUTO_CLOSE[ch]:
-                        # Editor likely auto-inserted; delete the unwanted closing bracket
-                        time.sleep(0.02)
-                        pyautogui.press("delete")
-                        time.sleep(0.01)
+                        time.sleep(0.1)   # wait for browser to auto-insert closing bracket
+                        if ch == "{":
+                            # { is always end-of-line; End then Backspace removes auto-}
+                            pyautogui.press("end")
+                            time.sleep(0.03)
+                            pyautogui.press("backspace")
+                        else:
+                            # For ( [ " ' — cursor is right before auto-close, Delete removes it
+                            pyautogui.press("delete")
+                        time.sleep(0.03)
                 j += 1
             if i < len(lines) - 1:
-                time.sleep(0.02)
+                time.sleep(0.03)
                 pyautogui.press("enter")
-                time.sleep(0.02)
+                time.sleep(0.03)
 
     elif mode == "human":
         # Human Anti-Auto-Bracket Engine: same approach with natural timing
@@ -286,9 +291,14 @@ def insert_code(code: str, mode: str):
                 if ch in AUTO_CLOSE:
                     next_ch = line[j + 1] if j + 1 < len(line) else None
                     if next_ch != AUTO_CLOSE[ch]:
-                        time.sleep(0.02)
-                        pyautogui.press("delete")
-                        time.sleep(0.01)
+                        time.sleep(0.1)   # wait for browser to auto-insert
+                        if ch == "{":
+                            pyautogui.press("end")
+                            time.sleep(0.03)
+                            pyautogui.press("backspace")
+                        else:
+                            pyautogui.press("delete")
+                        time.sleep(0.03)
                 j += 1
             if i < len(lines) - 1:
                 pyautogui.press("enter")
