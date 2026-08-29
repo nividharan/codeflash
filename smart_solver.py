@@ -174,15 +174,20 @@ def build_text_prompt(problem_text: str, language: str) -> str:
     return f"""You are an expert competitive programmer.
 Solve the following coding challenge in {language}.
 
-CRITICAL REQUIREMENTS:
-1. Provide a COMPLETE, fully self-contained, and 100% runnable program in {language}.
-2. For Java:
-   - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
-   - Include required imports (e.g. `import java.util.*;`).
-   - Ensure all opening and closing braces strictly balance.
-3. For Python: Output complete runnable code.
-4. For C++: Include `#include <iostream>` and `int main()`.
-5. STRICTLY FORBIDDEN: Do NOT write ANY comments (no `//` or `/* */`), no explanations, no thought process, and no reasoning notes. Output ONLY pure executable code statements.
+PLATFORM & FORMAT DETECTION:
+1. IF the problem is a LEETCODE-style question (asks to implement a method, or shows class Solution):
+   - Provide the EXACT class and method signature expected by LeetCode (e.g. `class Solution {{ public ... }}`).
+   - Return the result directly from the method.
+   - Do NOT include `public class Main`, `Scanner(System.in)`, or `System.out.println`.
+2. IF the problem is a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
+   - Read from standard input (e.g. `Scanner` in Java, `cin` in C++, `sys.stdin` in Python).
+   - Print the exact required output format (e.g. `Palindrome` / `Not a Palindrome` or `YES` / `NO` or numbers) to standard output.
+   - For Java: Use `public class Main` with `public static void main(String[] args)`.
+
+STRICT CONSTRAINTS:
+- Do NOT write ANY comments (no `//` or `/* */`).
+- Do NOT write any explanations, markdown notes, or walkthroughs.
+- Output ONLY the pure source code inside ```{language.lower()} ```.
 
 Problem:
 {problem_text}
@@ -193,15 +198,20 @@ def build_vision_prompt(language: str) -> str:
     return f"""You are an expert competitive programmer.
 Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
 
-CRITICAL REQUIREMENTS:
-1. Provide a COMPLETE, fully self-contained, and 100% runnable program in {language}.
-2. For Java:
-   - ALWAYS output a full `public class Main` with `public static void main(String[] args)` that compiles and runs directly (`javac Main.java`).
-   - Include required imports (e.g. `import java.util.*;`).
-   - Ensure all opening and closing braces strictly balance.
-3. For Python: Output complete runnable code.
-4. For C++: Include `#include <iostream>` and `int main()`.
-5. STRICTLY FORBIDDEN: Do NOT write ANY comments (no `//` or `/* */`), no explanations, no thought process, and no reasoning notes. Output ONLY pure executable code statements.
+PLATFORM & FORMAT DETECTION:
+1. IF the screen shows LEETCODE (e.g. LeetCode UI, class Solution, or method signature):
+   - Provide the EXACT `class Solution` with the method signature visible on the screen.
+   - Return the result directly from the method.
+   - Do NOT include `public class Main` or `Scanner`.
+2. IF the screen shows a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
+   - Read from standard input (`Scanner` / `cin` / `sys.stdin`).
+   - Print the exact required output format (`System.out.println`) matching the sample output.
+   - For Java: Use `public class Main` with `public static void main(String[] args)`.
+
+STRICT CONSTRAINTS:
+- Do NOT write ANY comments (no `//` or `/* */`).
+- Do NOT write any explanations, markdown notes, or walkthroughs.
+- Output ONLY the pure source code inside ```{language.lower()} ```.
 """
 
 
