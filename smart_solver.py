@@ -251,24 +251,25 @@ def insert_code(code: str, mode: str):
 
             if not content:
                 if i < len(lines) - 1:
-                    pyautogui.press("enter")
-                    time.sleep(0.02)
+                    keyboard.send("enter")
+                    time.sleep(0.05)
                 continue
 
-            # Type the entire line cleanly
-            keyboard.write(content, delay=0.003)
-            time.sleep(0.02)
+            # Type the entire line with safe keystroke pacing (prevents browser dropping chars)
+            keyboard.write(content, delay=0.008)
+            time.sleep(0.05)
 
-            # If the line ends with '{', remove Ace's auto-inserted '}'
+            # If the line ends with '{', Ace editor automatically auto-inserts '}' right after the cursor.
+            # Pressing 'Delete' removes that auto-inserted '}' before moving to the next line.
             code_no_comment = content.split("//")[0].rstrip()
             if code_no_comment.endswith("{"):
-                time.sleep(0.02)
-                pyautogui.press("delete")
-                time.sleep(0.01)
+                time.sleep(0.04)
+                keyboard.send("delete")
+                time.sleep(0.04)
 
             if i < len(lines) - 1:
-                pyautogui.press("enter")
-                time.sleep(0.02)
+                keyboard.send("enter")
+                time.sleep(0.05)
 
     elif mode == "human":
         # Realistic Human Keystroke Engine with natural typing cadence
@@ -281,28 +282,29 @@ def insert_code(code: str, mode: str):
 
             if not content:
                 if i < len(lines) - 1:
-                    pyautogui.press("enter")
-                    time.sleep(random.uniform(0.05, 0.12))
+                    keyboard.send("enter")
+                    time.sleep(random.uniform(0.08, 0.15))
                 continue
 
             for char in content:
                 keyboard.write(char)
                 if char in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.03, 0.08))
+                    time.sleep(random.uniform(0.04, 0.08))
                 elif char == " ":
-                    time.sleep(random.uniform(0.015, 0.035))
+                    time.sleep(random.uniform(0.02, 0.04))
                 else:
-                    time.sleep(random.uniform(0.005, 0.02))
+                    time.sleep(random.uniform(0.01, 0.025))
 
+            time.sleep(0.05)
             code_no_comment = content.split("//")[0].rstrip()
             if code_no_comment.endswith("{"):
-                time.sleep(0.03)
-                pyautogui.press("delete")
-                time.sleep(0.02)
+                time.sleep(0.04)
+                keyboard.send("delete")
+                time.sleep(0.04)
 
             if i < len(lines) - 1:
-                pyautogui.press("enter")
-                time.sleep(random.uniform(0.05, 0.12))
+                keyboard.send("enter")
+                time.sleep(random.uniform(0.08, 0.16))
 
 
 def cycle_language():
