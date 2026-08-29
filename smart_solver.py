@@ -225,20 +225,31 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Fast Keystroke Engine (Bypasses Talentely / Mettl paste blocks)
-        # Sends native Windows Unicode hardware events directly into the active editor
-        keyboard.write(code, delay=0.001)
+        # Ultra Keystroke Engine: Line-by-line paced typing (prevents browser dropping keystrokes)
+        lines = code.split("\n")
+        for i, line in enumerate(lines):
+            if line:
+                keyboard.write(line, delay=0.005)
+            if i < len(lines) - 1:
+                time.sleep(0.02)
+                pyautogui.press("enter")
+                time.sleep(0.02)
 
     elif mode == "human":
         # Realistic Human Keystroke Engine with natural typing cadence
-        for char in code:
-            keyboard.write(char)
-            if char in ("\n", ";", "{", "}"):
-                time.sleep(random.uniform(0.06, 0.16))
-            elif char == " ":
-                time.sleep(random.uniform(0.015, 0.04))
-            else:
-                time.sleep(random.uniform(0.008, 0.025))
+        lines = code.split("\n")
+        for i, line in enumerate(lines):
+            for char in line:
+                keyboard.write(char)
+                if char in (";", "{", "}"):
+                    time.sleep(random.uniform(0.06, 0.16))
+                elif char == " ":
+                    time.sleep(random.uniform(0.015, 0.04))
+                else:
+                    time.sleep(random.uniform(0.008, 0.025))
+            if i < len(lines) - 1:
+                pyautogui.press("enter")
+                time.sleep(random.uniform(0.05, 0.12))
 
 
 def cycle_language():
