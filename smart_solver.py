@@ -248,8 +248,6 @@ def insert_code(code: str, mode: str):
         is_c_style = lang not in ("python",)
 
         for i, line in enumerate(lines):
-            # For C-style languages (Java, C++, JS, TS, C#, Go), strip leading spaces
-            # because Ace Editor automatically maintains correct block indentation on Enter.
             content = line.strip() if is_c_style else line.rstrip()
 
             if not content:
@@ -258,13 +256,11 @@ def insert_code(code: str, mode: str):
                     time.sleep(0.02)
                 continue
 
-            # Type the line with fast, reliable hardware keystrokes
+            # Type the entire line cleanly
             keyboard.write(content, delay=0.003)
             time.sleep(0.02)
 
-            # When a line ends with '{', Ace editor automatically auto-inserts '}' right after the cursor.
-            # Pressing 'Delete' immediately removes that extra '}' before pressing Enter,
-            # keeping the opening '{' perfectly in place and preventing duplicate closing braces!
+            # If the line ends with '{', remove Ace's auto-inserted '}'
             code_no_comment = content.split("//")[0].rstrip()
             if code_no_comment.endswith("{"):
                 time.sleep(0.02)
@@ -293,11 +289,11 @@ def insert_code(code: str, mode: str):
             for char in content:
                 keyboard.write(char)
                 if char in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.04, 0.10))
+                    time.sleep(random.uniform(0.03, 0.08))
                 elif char == " ":
-                    time.sleep(random.uniform(0.015, 0.04))
+                    time.sleep(random.uniform(0.015, 0.035))
                 else:
-                    time.sleep(random.uniform(0.008, 0.025))
+                    time.sleep(random.uniform(0.005, 0.02))
 
             code_no_comment = content.split("//")[0].rstrip()
             if code_no_comment.endswith("{"):
@@ -307,7 +303,7 @@ def insert_code(code: str, mode: str):
 
             if i < len(lines) - 1:
                 pyautogui.press("enter")
-                time.sleep(random.uniform(0.06, 0.15))
+                time.sleep(random.uniform(0.05, 0.12))
 
 
 def cycle_language():
