@@ -251,18 +251,32 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Keystroke Engine: 8ms/char with 100ms post-Enter to prevent SendInput buffer overflow
+        # Ultra Keystroke Engine with Ace Auto-Bracket Neutralizer
         lines = [l.strip() for l in code.splitlines() if l.strip()]
+        lang = state.get("language", "Java").lower()
+        is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
+
         for i, line in enumerate(lines):
             keyboard.write(line, delay=0.008, exact=True)
-            time.sleep(0.03)
+            time.sleep(0.04)
+
+            # When a line ends with '{', Ace editor automatically generates '}' right after the cursor.
+            # Neutralize the auto-bracket by deleting it before sending Enter.
+            if is_brace_lang and line.endswith("{"):
+                time.sleep(0.04)
+                keyboard.send("delete")
+                time.sleep(0.03)
+
             if i < len(lines) - 1:
                 keyboard.send("enter")
                 time.sleep(0.10)
 
     elif mode == "human":
-        # Realistic Human Keystroke Engine with natural typing cadence
+        # Realistic Human Keystroke Engine with Ace Auto-Bracket Neutralizer
         lines = [l.strip() for l in code.splitlines() if l.strip()]
+        lang = state.get("language", "Java").lower()
+        is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
+
         for i, line in enumerate(lines):
             for char in line:
                 keyboard.write(char, exact=True)
@@ -272,8 +286,14 @@ def insert_code(code: str, mode: str):
                     time.sleep(random.uniform(0.015, 0.035))
                 else:
                     time.sleep(random.uniform(0.006, 0.018))
-            if i < len(lines) - 1:
+
+            time.sleep(0.04)
+            if is_brace_lang and line.endswith("{"):
                 time.sleep(0.04)
+                keyboard.send("delete")
+                time.sleep(0.03)
+
+            if i < len(lines) - 1:
                 keyboard.send("enter")
                 time.sleep(random.uniform(0.08, 0.16))
 

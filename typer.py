@@ -45,7 +45,13 @@ def type_code(text: str, mode: str = "instant"):
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
             keyboard.write(line, delay=0.008, exact=True)
-            time.sleep(0.03)
+            time.sleep(0.04)
+
+            if line.endswith("{"):
+                time.sleep(0.04)
+                keyboard.send("delete")
+                time.sleep(0.03)
+
             if i < len(lines) - 1:
                 keyboard.send("enter")
                 time.sleep(0.10)
@@ -61,8 +67,14 @@ def type_code(text: str, mode: str = "instant"):
                     time.sleep(random.uniform(0.015, 0.035))
                 else:
                     time.sleep(random.uniform(0.006, 0.018))
-            if i < len(lines) - 1:
+
+            time.sleep(0.04)
+            if line.endswith("{"):
                 time.sleep(0.04)
+                keyboard.send("delete")
+                time.sleep(0.03)
+
+            if i < len(lines) - 1:
                 keyboard.send("enter")
                 time.sleep(random.uniform(0.08, 0.16))
     else:
