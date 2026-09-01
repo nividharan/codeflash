@@ -175,11 +175,14 @@ def build_text_prompt(problem_text: str, language: str) -> str:
 Solve the following coding challenge in {language}.
 
 PLATFORM & FORMAT DETECTION:
-1. IF the problem is a LEETCODE-style question (asks to implement a method, or shows class Solution):
+1. IF the problem is COCUBES or similar assessment platform:
+   - CoCubes typically uses `class UserMainCode` with a specific method signature (e.g. `public int solve(int input1, int[] input2)`).
+   - If `UserMainCode` or a method skeleton is present or mentioned, KEEP `class UserMainCode` and implement the exact method signature with `return`! Do NOT write `public class Main` or `Scanner`.
+2. IF the problem is a LEETCODE-style question (asks to implement a method, or shows class Solution):
    - Provide the EXACT class and method signature expected by LeetCode (e.g. `class Solution {{ public ... }}`).
    - Return the result directly from the method.
    - Do NOT include `public class Main`, `Scanner(System.in)`, or `System.out.println`.
-2. IF the problem is a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
+3. IF the problem is a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
    - Read from standard input (e.g. `Scanner` in Java, `cin` in C++, `sys.stdin` in Python).
    - Print the exact required output format (e.g. `Palindrome` / `Not a Palindrome` or `YES` / `NO` or numbers) to standard output.
    - For Java: Use `public class Main` with `public static void main(String[] args)`.
@@ -199,11 +202,15 @@ def build_vision_prompt(language: str) -> str:
 Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
 
 PLATFORM & FORMAT DETECTION:
-1. IF the screen shows LEETCODE (e.g. LeetCode UI, class Solution, or method signature):
+1. IF the screen shows COCUBES (e.g. `UserMainCode`, `input1`, `input2` method parameters, or CoCubes UI):
+   - Provide the EXACT `class UserMainCode` with the exact method signature visible on the screen.
+   - Return the result directly from the method.
+   - Do NOT include `public class Main` or `Scanner`.
+2. IF the screen shows LEETCODE (e.g. LeetCode UI, class Solution, or method signature):
    - Provide the EXACT `class Solution` with the method signature visible on the screen.
    - Return the result directly from the method.
    - Do NOT include `public class Main` or `Scanner`.
-2. IF the screen shows a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
+3. IF the screen shows a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
    - Read from standard input (`Scanner` / `cin` / `sys.stdin`).
    - Print the exact required output format (`System.out.println`) matching the sample output.
    - For Java: Use `public class Main` with `public static void main(String[] args)`.
@@ -495,10 +502,10 @@ def main():
     hk_lang = config.get("hotkey_switch_lang", "F9")
     hk_mode = config.get("hotkey_switch_mode", "F10")
 
-    keyboard.add_hotkey(hk_vision, lambda: trigger_solve_vision(client))
-    keyboard.add_hotkey(hk_solve, lambda: trigger_solve_text(client))
-    keyboard.add_hotkey(hk_lang, cycle_language)
-    keyboard.add_hotkey(hk_mode, cycle_mode)
+    keyboard.add_hotkey(hk_vision, lambda: trigger_solve_vision(client), suppress=True)
+    keyboard.add_hotkey(hk_solve, lambda: trigger_solve_text(client), suppress=True)
+    keyboard.add_hotkey(hk_lang, cycle_language, suppress=True)
+    keyboard.add_hotkey(hk_mode, cycle_mode, suppress=True)
 
     try:
         keyboard.wait()
