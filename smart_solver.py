@@ -279,7 +279,7 @@ def insert_code(code: str, mode: str):
                 time.sleep(0.10)
 
     elif mode == "human":
-        # Realistic Human Keystroke Engine with Ace Auto-Bracket Neutralizer
+        # Realistic Human Keystroke Engine with natural cadence (reduced, human-authentic speed)
         lines = [l.strip() for l in code.splitlines() if l.strip()]
         lang = state.get("language", "Java").lower()
         is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
@@ -287,22 +287,28 @@ def insert_code(code: str, mode: str):
         for i, line in enumerate(lines):
             for char in line:
                 keyboard.write(char, exact=True)
-                if char in (";", "{", "}", "(", ")"):
-                    time.sleep(random.uniform(0.03, 0.07))
+                if char in (";", "{", "}", "(", ")", "[", "]", ":"):
+                    time.sleep(random.uniform(0.12, 0.25))
                 elif char == " ":
-                    time.sleep(random.uniform(0.015, 0.035))
+                    time.sleep(random.uniform(0.06, 0.14))
+                elif char in (",", ".", "=", "+", "-", "*", "/", ">", "<"):
+                    time.sleep(random.uniform(0.08, 0.18))
                 else:
-                    time.sleep(random.uniform(0.006, 0.018))
+                    time.sleep(random.uniform(0.035, 0.085))
 
-            time.sleep(0.04)
+                # Occasional brief thinking pause (3% chance)
+                if random.random() < 0.03:
+                    time.sleep(random.uniform(0.20, 0.45))
+
+            time.sleep(0.06)
             if is_brace_lang and line.endswith("{"):
-                time.sleep(0.04)
+                time.sleep(0.06)
                 keyboard.send("delete")
-                time.sleep(0.03)
+                time.sleep(0.04)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(random.uniform(0.08, 0.16))
+                time.sleep(random.uniform(0.25, 0.55))
 
 
 def cycle_language():
