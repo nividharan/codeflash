@@ -45,12 +45,12 @@ def type_code(text: str, mode: str = "instant"):
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
             keyboard.write(line, delay=0.008, exact=True)
-            time.sleep(0.04)
+            time.sleep(0.06)
 
             if line.endswith("{"):
-                time.sleep(0.04)
+                time.sleep(0.07)
                 keyboard.send("delete")
-                time.sleep(0.03)
+                time.sleep(0.04)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")

@@ -187,6 +187,12 @@ PLATFORM & FORMAT DETECTION:
    - Print the exact required output format (e.g. `Palindrome` / `Not a Palindrome` or `YES` / `NO` or numbers) to standard output.
    - For Java: Use `public class Main` with `public static void main(String[] args)`.
 
+CRITICAL CONCISENESS & BRACE SAFETY:
+- Write the most concise, flat, and compact code possible.
+- Put all logic directly inside `main()` or the required method. Avoid unnecessary helper classes or helper methods.
+- Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, etc.) instead of writing custom Linked Node/Bucket implementations from scratch!
+- Keep braces shallow and minimal so web editors never suffer bracket mismatch errors.
+
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
 - Do NOT write any explanations, markdown notes, or walkthroughs.
@@ -214,6 +220,12 @@ PLATFORM & FORMAT DETECTION:
    - Read from standard input (`Scanner` / `cin` / `sys.stdin`).
    - Print the exact required output format (`System.out.println`) matching the sample output.
    - For Java: Use `public class Main` with `public static void main(String[] args)`.
+
+CRITICAL CONCISENESS & BRACE SAFETY:
+- Write the most concise, flat, and compact code possible.
+- Put all logic directly inside `main()` or the required method. Avoid unnecessary helper classes or helper methods.
+- Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, etc.) instead of writing custom Linked Node/Bucket implementations from scratch!
+- Keep braces shallow and minimal so web editors never suffer bracket mismatch errors.
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
@@ -265,14 +277,14 @@ def insert_code(code: str, mode: str):
 
         for i, line in enumerate(lines):
             keyboard.write(line, delay=0.008, exact=True)
-            time.sleep(0.04)
+            time.sleep(0.06)
 
             # When a line ends with '{', Ace editor automatically generates '}' right after the cursor.
             # Neutralize the auto-bracket by deleting it before sending Enter.
             if is_brace_lang and line.endswith("{"):
-                time.sleep(0.04)
+                time.sleep(0.07)
                 keyboard.send("delete")
-                time.sleep(0.03)
+                time.sleep(0.04)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")
