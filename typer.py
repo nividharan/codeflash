@@ -44,22 +44,19 @@ def type_code(text: str, mode: str = "instant"):
     elif mode == "ultra":
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            keyboard.write(line, delay=0.008, exact=True)
-            time.sleep(0.06)
-
-            if line.endswith("{"):
-                time.sleep(0.07)
-                keyboard.send("delete")
-                time.sleep(0.04)
+            content = (line + " ") if line.endswith("{") else line
+            keyboard.write(content, delay=0.008, exact=True)
+            time.sleep(0.04)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.10)
+                time.sleep(0.08)
 
     elif mode == "human":
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         for i, line in enumerate(lines):
-            for char in line:
+            content = (line + " ") if line.endswith("{") else line
+            for char in content:
                 keyboard.write(char, exact=True)
                 if char in (";", "{", "}", "(", ")", "[", "]", ":"):
                     time.sleep(random.uniform(0.12, 0.25))
@@ -73,15 +70,10 @@ def type_code(text: str, mode: str = "instant"):
                 if random.random() < 0.03:
                     time.sleep(random.uniform(0.20, 0.45))
 
-            time.sleep(0.06)
-            if line.endswith("{"):
-                time.sleep(0.06)
-                keyboard.send("delete")
-                time.sleep(0.04)
-
+            time.sleep(0.05)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(random.uniform(0.25, 0.55))
+                time.sleep(random.uniform(0.20, 0.45))
     else:
         print(f"[!] Unknown mode '{mode}', defaulting to instant paste.")
         pyperclip.copy(text)

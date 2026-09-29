@@ -270,34 +270,33 @@ def insert_code(code: str, mode: str):
         time.sleep(0.04)
 
     elif mode == "ultra":
-        # Ultra Keystroke Engine with Ace Auto-Bracket Neutralizer
+        # Ultra Keystroke Engine: Trailing space neutralizer prevents Ace auto-bracket on Enter
         lines = [l.strip() for l in code.splitlines() if l.strip()]
         lang = state.get("language", "Java").lower()
         is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
 
         for i, line in enumerate(lines):
-            keyboard.write(line, delay=0.008, exact=True)
-            time.sleep(0.06)
+            # In Ace editor, appending a trailing space after '{' ensures prevChar != '{' on Enter,
+            # which completely bypasses Ace's auto-bracket insertion with 0 race conditions!
+            content = (line + " ") if (is_brace_lang and line.endswith("{")) else line
 
-            # When a line ends with '{', Ace editor automatically generates '}' right after the cursor.
-            # Neutralize the auto-bracket by deleting it before sending Enter.
-            if is_brace_lang and line.endswith("{"):
-                time.sleep(0.07)
-                keyboard.send("delete")
-                time.sleep(0.04)
+            keyboard.write(content, delay=0.008, exact=True)
+            time.sleep(0.04)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.10)
+                time.sleep(0.08)
 
     elif mode == "human":
-        # Realistic Human Keystroke Engine with natural cadence (reduced, human-authentic speed)
+        # Realistic Human Keystroke Engine: Trailing space neutralizer prevents Ace auto-bracket
         lines = [l.strip() for l in code.splitlines() if l.strip()]
         lang = state.get("language", "Java").lower()
         is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
 
         for i, line in enumerate(lines):
-            for char in line:
+            content = (line + " ") if (is_brace_lang and line.endswith("{")) else line
+
+            for char in content:
                 keyboard.write(char, exact=True)
                 if char in (";", "{", "}", "(", ")", "[", "]", ":"):
                     time.sleep(random.uniform(0.12, 0.25))
@@ -308,19 +307,13 @@ def insert_code(code: str, mode: str):
                 else:
                     time.sleep(random.uniform(0.035, 0.085))
 
-                # Occasional brief thinking pause (3% chance)
                 if random.random() < 0.03:
                     time.sleep(random.uniform(0.20, 0.45))
 
-            time.sleep(0.06)
-            if is_brace_lang and line.endswith("{"):
-                time.sleep(0.06)
-                keyboard.send("delete")
-                time.sleep(0.04)
-
+            time.sleep(0.05)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(random.uniform(0.25, 0.55))
+                time.sleep(random.uniform(0.20, 0.45))
 
 
 def cycle_language():
