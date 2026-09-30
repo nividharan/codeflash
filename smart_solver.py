@@ -167,6 +167,35 @@ def clean_code(raw_text: str, language: str = "") -> str:
             continue
         clean_lines.append(line)
 
+    # 4. For class-based languages (Java, C++, C#): Sanitize trailing garbage after the main class closes
+    is_class_lang = (language or state.get("language", "")).lower() in ("java", "c++", "c#", "cpp")
+    if is_class_lang:
+        brace_count = 0
+        class_started = False
+        final_lines = []
+        for line in clean_lines:
+            stripped = line.strip()
+            if not class_started and ("class " in stripped or "interface " in stripped):
+                class_started = True
+
+            final_lines.append(line)
+
+            if class_started:
+                in_quote = False
+                for ch in line:
+                    if ch == '"':
+                        in_quote = not in_quote
+                    elif not in_quote:
+                        if ch == '{':
+                            brace_count += 1
+                        elif ch == '}':
+                            brace_count -= 1
+
+                if brace_count == 0:
+                    # Top-level class has fully closed! Drop any trailing junk like '})' or stray characters!
+                    break
+        clean_lines = final_lines
+
     return "\n".join(clean_lines).strip()
 
 
@@ -269,6 +298,8 @@ def insert_code(code: str, mode: str):
         pyautogui.hotkey("ctrl", "a")
         time.sleep(0.08)
         pyautogui.press("backspace")
+        time.sleep(0.04)
+        pyautogui.press("delete")
         time.sleep(0.06)
 
     # 2. Insert code based on selected mode
