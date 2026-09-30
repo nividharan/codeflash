@@ -26,10 +26,10 @@ TYPING_MODES = ["instant", "ultra", "human"]
 
 # Fallback models in priority order (active and tested on API)
 MODELS_TO_TRY = [
+    "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
     "gemini-3.7-flash"
 ]
 
@@ -216,21 +216,32 @@ CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
    - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
    - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
 
-3. NUMERICAL OVERFLOW & PRECISION SAFETY:
+3. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
+   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
+     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet, largest is `set.last()`, second largest is `set.lower(set.last())` or remove `set.pollLast()` and take `set.last()`. NEVER call `pollFirst()` (which removes the minimum)!
+     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet, smallest is `set.first()`, second smallest is `set.higher(set.first())` or remove `set.pollFirst()` and take `set.first()`.
+   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
+   - NEGATIVE VALUES DEFENSE: NEVER initialize maximum or second maximum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to `Long.MIN_VALUE` / `Long.MAX_VALUE`.
+   - PRIORITY QUEUES: In Java, `new PriorityQueue<>()` is a MIN-HEAP by default. For Max-Heap, you MUST use `Collections.reverseOrder()`.
+   - SORTING: `Arrays.sort(arr)` sorts ASCENDING. The maximum is at index `n - 1`, and the minimum is at index `0`.
+
+4. NUMERICAL OVERFLOW & PRECISION SAFETY:
    - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
-   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step!
+   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step. For subtraction: `(a % MOD - b % MOD + MOD) % MOD`.
    - FLOATING POINT: If problem requires decimal places, format strictly with `System.out.printf` or `String.format`.
 
-4. ROBUST MULTI-LINE INPUT PARSING:
+5. ROBUST MULTI-LINE INPUT PARSING:
    - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
    - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
 
-5. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
+6. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
    - Write concise, flat, and shallow code. Avoid unnecessary helper classes or deeply nested blocks.
    - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, `TreeMap`) instead of writing custom Linked Node/Bucket implementations from scratch.
 
-6. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+7. OPTIMAL COMPLEXITY (TLE PREVENTION), INDEXING & EDGE CASES:
    - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
+   - Carefully check 0-based vs 1-based indexing for positions, queries, and outputs.
+   - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
    - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
 STRICT CONSTRAINTS:
@@ -260,21 +271,32 @@ CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
    - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
    - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
 
-3. NUMERICAL OVERFLOW & PRECISION SAFETY:
+3. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
+   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
+     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet, largest is `set.last()`, second largest is `set.lower(set.last())` or remove `set.pollLast()` and take `set.last()`. NEVER call `pollFirst()` (which removes the minimum)!
+     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet, smallest is `set.first()`, second smallest is `set.higher(set.first())` or remove `set.pollFirst()` and take `set.first()`.
+   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
+   - NEGATIVE VALUES DEFENSE: NEVER initialize maximum or second maximum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to `Long.MIN_VALUE` / `Long.MAX_VALUE`.
+   - PRIORITY QUEUES: In Java, `new PriorityQueue<>()` is a MIN-HEAP by default. For Max-Heap, you MUST use `Collections.reverseOrder()`.
+   - SORTING: `Arrays.sort(arr)` sorts ASCENDING. The maximum is at index `n - 1`, and the minimum is at index `0`.
+
+4. NUMERICAL OVERFLOW & PRECISION SAFETY:
    - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
-   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step!
+   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step. For subtraction: `(a % MOD - b % MOD + MOD) % MOD`.
    - FLOATING POINT: If problem requires decimal places, format strictly with `System.out.printf` or `String.format`.
 
-4. ROBUST MULTI-LINE INPUT PARSING:
+5. ROBUST MULTI-LINE INPUT PARSING:
    - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
    - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
 
-5. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
+6. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
    - Write concise, flat, and shallow code. Avoid unnecessary helper classes or deeply nested blocks.
    - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, `TreeMap`) instead of writing custom Linked Node/Bucket implementations from scratch.
 
-6. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+7. OPTIMAL COMPLEXITY (TLE PREVENTION), INDEXING & EDGE CASES:
    - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
+   - Carefully check 0-based vs 1-based indexing for positions, queries, and outputs.
+   - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
    - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
 STRICT CONSTRAINTS:
