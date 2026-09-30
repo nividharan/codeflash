@@ -193,6 +193,10 @@ CRITICAL CONCISENESS & BRACE SAFETY:
 - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, etc.) instead of writing custom Linked Node/Bucket implementations from scratch!
 - Keep braces shallow and minimal so web editors never suffer bracket mismatch errors.
 
+NUMERICAL SAFETY & ROBUST I/O:
+- ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for values, arithmetic (sums, differences, products), and Map keys whenever constraints exceed 10^5 or involve negative numbers, to prevent 32-bit integer overflow/underflow!
+- For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`) which automatically handles multi-line inputs, whitespace, and blank lines without failing.
+
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
 - Do NOT write any explanations, markdown notes, or walkthroughs.
@@ -226,6 +230,10 @@ CRITICAL CONCISENESS & BRACE SAFETY:
 - Put all logic directly inside `main()` or the required method. Avoid unnecessary helper classes or helper methods.
 - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, etc.) instead of writing custom Linked Node/Bucket implementations from scratch!
 - Keep braces shallow and minimal so web editors never suffer bracket mismatch errors.
+
+NUMERICAL SAFETY & ROBUST I/O:
+- ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for values, arithmetic (sums, differences, products), and Map keys whenever constraints exceed 10^5 or involve negative numbers, to prevent 32-bit integer overflow/underflow!
+- For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`) which automatically handles multi-line inputs, whitespace, and blank lines without failing.
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
