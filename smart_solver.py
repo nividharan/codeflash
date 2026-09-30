@@ -244,6 +244,10 @@ CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
    - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
    - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
+8. MENTAL DRY-RUN VERIFICATION:
+   - Mentally trace your solution step-by-step against Sample 1, Sample 2, and edge cases before outputting.
+   - Ensure the logic outputs the EXACT sample outputs without off-by-one errors or inverted logic.
+
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
 - Do NOT write any explanations, markdown notes, or walkthroughs.
@@ -298,6 +302,11 @@ CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
    - Carefully check 0-based vs 1-based indexing for positions, queries, and outputs.
    - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
    - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
+
+8. CLEAN-ROOM VISION ISOLATION & DRY-RUN:
+   - IGNORE any pre-existing code, failed attempts, or starter snippets visible in the web editor/IDE area of the image.
+   - Formulate the solution strictly from the Problem Statement, Input/Output specifications, Constraints, and Sample Cases.
+   - Mentally verify against visible Sample 1 and Sample 2 to guarantee 100% correct outputs before generating.
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
