@@ -226,6 +226,12 @@ NUMERICAL SAFETY & ROBUST I/O:
 - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for values, arithmetic (sums, differences, products), and Map keys whenever constraints exceed 10^5 or involve negative numbers, to prevent 32-bit integer overflow/underflow!
 - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`) which automatically handles multi-line inputs, whitespace, and blank lines without failing.
 
+TREE & NODE RETURN TYPE FIDELITY:
+- When a problem says "return the root of the tree" or "return the root the max heap tree" (e.g. CreateHeap, BuildTree):
+  * The return type is a Tree node (`Node` or `TreeNode`), NOT a raw integer (`int`)!
+  * Never change a `Node` return type to `int` simply because the sample output prints the root's value (e.g. `19`). The platform's driver expects the root `Node` and accesses `root.data`!
+  * Construct the complete binary tree representation (left child at `2*i + 1`, right child at `2*i + 2`).
+
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
 - Do NOT write any explanations, markdown notes, or walkthroughs.
@@ -263,6 +269,12 @@ CRITICAL CONCISENESS & BRACE SAFETY:
 NUMERICAL SAFETY & ROBUST I/O:
 - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for values, arithmetic (sums, differences, products), and Map keys whenever constraints exceed 10^5 or involve negative numbers, to prevent 32-bit integer overflow/underflow!
 - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`) which automatically handles multi-line inputs, whitespace, and blank lines without failing.
+
+TREE & NODE RETURN TYPE FIDELITY:
+- When a problem says "return the root of the tree" or "return the root the max heap tree" (e.g. CreateHeap, BuildTree):
+  * The return type is a Tree node (`Node` or `TreeNode`), NOT a raw integer (`int`)!
+  * Never change a `Node` return type to `int` simply because the sample output prints the root's value (e.g. `19`). The platform's driver expects the root `Node` and accesses `root.data`!
+  * Construct the complete binary tree representation (left child at `2*i + 1`, right child at `2*i + 2`).
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
