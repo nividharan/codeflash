@@ -2,10 +2,21 @@
   "api_key": "YOUR_GEMINI_API_KEY_HERE",
   "target_language": "Java",
   "typing_mode": "instant",
-  "sound_feedback": true,
+  "sound_feedback": false,
   "paste_delay_seconds": 1.5,
+  "hotkey_snip": "F6",
   "hotkey_vision": "F7",
   "hotkey_solve": "F8",
+  "hotkey_toggle_hud": "F4",
+  "hotkey_toggle_ghost": "F3",
+  "hotkey_toggle_anti_capture": "F2",
   "hotkey_switch_lang": "F9",
-  "hotkey_switch_mode": "F10"
+  "hotkey_switch_mode": "F10",
+  "hud_opacity": 0.94,
+  "hud_always_on_top": true,
+  "hud_compact_mode": false,
+  "anti_capture_protection": true,
+  "ghost_mode": false,
+  "click_through": false,
+  "hud_theme": "dark_cyber"
 }

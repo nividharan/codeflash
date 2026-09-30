@@ -203,34 +203,35 @@ def build_text_prompt(problem_text: str, language: str) -> str:
     return f"""You are an expert competitive programmer.
 Solve the following coding challenge in {language}.
 
-PLATFORM & FORMAT DETECTION:
-1. IF the problem is COCUBES or similar assessment platform:
-   - CoCubes typically uses `class UserMainCode` with a specific method signature (e.g. `public int solve(int input1, int[] input2)`).
-   - If `UserMainCode` or a method skeleton is present or mentioned, KEEP `class UserMainCode` and implement the exact method signature with `return`! Do NOT write `public class Main` or `Scanner`.
-2. IF the problem is a LEETCODE-style question (asks to implement a method, or shows class Solution):
-   - Provide the EXACT class and method signature expected by LeetCode (e.g. `class Solution {{ public ... }}`).
-   - Return the result directly from the method.
-   - Do NOT include `public class Main`, `Scanner(System.in)`, or `System.out.println`.
-3. IF the problem is a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
-   - Read from standard input (e.g. `Scanner` in Java, `cin` in C++, `sys.stdin` in Python).
-   - Print the exact required output format (e.g. `Palindrome` / `Not a Palindrome` or `YES` / `NO` or numbers) to standard output.
-   - For Java: Use `public class Main` with `public static void main(String[] args)`.
+CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
 
-CRITICAL CONCISENESS & BRACE SAFETY:
-- Write the most concise, flat, and compact code possible.
-- Put all logic directly inside `main()` or the required method. Avoid unnecessary helper classes or helper methods.
-- Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, etc.) instead of writing custom Linked Node/Bucket implementations from scratch!
-- Keep braces shallow and minimal so web editors never suffer bracket mismatch errors.
+1. PLATFORM & FORMAT FIDELITY:
+   - COCUBES: Keep `class UserMainCode` with the exact method signature. Return the result directly.
+   - LEETCODE: Keep `class Solution` with the exact method signature. Return the result directly.
+   - HACKERRANK / GEEKSFORGEEKS: If `class Result` or a specific function is expected, output the matching class/function.
+   - STANDARD I/O (Talentely, TCS, Codeforces, MySlate): Read using `Scanner` and print via `System.out.println`. For Java, use `public class Main` with `public static void main(String[] args)`.
 
-NUMERICAL SAFETY & ROBUST I/O:
-- ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for values, arithmetic (sums, differences, products), and Map keys whenever constraints exceed 10^5 or involve negative numbers, to prevent 32-bit integer overflow/underflow!
-- For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`) which automatically handles multi-line inputs, whitespace, and blank lines without failing.
+2. DATA STRUCTURE & RETURN TYPE ACCURACY:
+   - TREE & HEAP: If returning a tree root (e.g. `CreateHeap`, `buildTree`, `invertTree`), return the root `Node` / `TreeNode` object, NEVER a raw integer or array! Build complete binary tree (`left = 2*i + 1`, `right = 2*i + 2`).
+   - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
+   - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
 
-TREE & NODE RETURN TYPE FIDELITY:
-- When a problem says "return the root of the tree" or "return the root the max heap tree" (e.g. CreateHeap, BuildTree):
-  * The return type is a Tree node (`Node` or `TreeNode`), NOT a raw integer (`int`)!
-  * Never change a `Node` return type to `int` simply because the sample output prints the root's value (e.g. `19`). The platform's driver expects the root `Node` and accesses `root.data`!
-  * Construct the complete binary tree representation (left child at `2*i + 1`, right child at `2*i + 2`).
+3. NUMERICAL OVERFLOW & PRECISION SAFETY:
+   - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
+   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step!
+   - FLOATING POINT: If problem requires decimal places, format strictly with `System.out.printf` or `String.format`.
+
+4. ROBUST MULTI-LINE INPUT PARSING:
+   - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
+   - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
+
+5. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
+   - Write concise, flat, and shallow code. Avoid unnecessary helper classes or deeply nested blocks.
+   - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, `TreeMap`) instead of writing custom Linked Node/Bucket implementations from scratch.
+
+6. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
+   - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
@@ -246,35 +247,35 @@ def build_vision_prompt(language: str) -> str:
     return f"""You are an expert competitive programmer.
 Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
 
-PLATFORM & FORMAT DETECTION:
-1. IF the screen shows COCUBES (e.g. `UserMainCode`, `input1`, `input2` method parameters, or CoCubes UI):
-   - Provide the EXACT `class UserMainCode` with the exact method signature visible on the screen.
-   - Return the result directly from the method.
-   - Do NOT include `public class Main` or `Scanner`.
-2. IF the screen shows LEETCODE (e.g. LeetCode UI, class Solution, or method signature):
-   - Provide the EXACT `class Solution` with the method signature visible on the screen.
-   - Return the result directly from the method.
-   - Do NOT include `public class Main` or `Scanner`.
-3. IF the screen shows a STANDARD I/O platform (Talentely, HackerRank, Codeforces, TCS, MySlate):
-   - Read from standard input (`Scanner` / `cin` / `sys.stdin`).
-   - Print the exact required output format (`System.out.println`) matching the sample output.
-   - For Java: Use `public class Main` with `public static void main(String[] args)`.
+CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
 
-CRITICAL CONCISENESS & BRACE SAFETY:
-- Write the most concise, flat, and compact code possible.
-- Put all logic directly inside `main()` or the required method. Avoid unnecessary helper classes or helper methods.
-- Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, etc.) instead of writing custom Linked Node/Bucket implementations from scratch!
-- Keep braces shallow and minimal so web editors never suffer bracket mismatch errors.
+1. PLATFORM & FORMAT FIDELITY:
+   - COCUBES: If the screen shows CoCubes / `UserMainCode`, provide the EXACT `class UserMainCode` with the exact method signature. Return the result directly.
+   - LEETCODE: If the screen shows LeetCode UI / `class Solution`, provide the EXACT `class Solution` with the method signature. Return the result directly.
+   - HACKERRANK / GEEKSFORGEEKS: If `class Result` or a specific function is expected, output matching class/function.
+   - STANDARD I/O (Talentely, TCS, Codeforces, MySlate): Read from standard input (`Scanner` / `cin` / `sys.stdin`) and print matching sample output. For Java, use `public class Main` with `public static void main(String[] args)`.
 
-NUMERICAL SAFETY & ROBUST I/O:
-- ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for values, arithmetic (sums, differences, products), and Map keys whenever constraints exceed 10^5 or involve negative numbers, to prevent 32-bit integer overflow/underflow!
-- For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`) which automatically handles multi-line inputs, whitespace, and blank lines without failing.
+2. DATA STRUCTURE & RETURN TYPE ACCURACY:
+   - TREE & HEAP: If returning a tree root (e.g. `CreateHeap`, `buildTree`, `invertTree`), return the root `Node` / `TreeNode` object, NEVER a raw integer or array! Build complete binary tree (`left = 2*i + 1`, `right = 2*i + 2`).
+   - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
+   - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
 
-TREE & NODE RETURN TYPE FIDELITY:
-- When a problem says "return the root of the tree" or "return the root the max heap tree" (e.g. CreateHeap, BuildTree):
-  * The return type is a Tree node (`Node` or `TreeNode`), NOT a raw integer (`int`)!
-  * Never change a `Node` return type to `int` simply because the sample output prints the root's value (e.g. `19`). The platform's driver expects the root `Node` and accesses `root.data`!
-  * Construct the complete binary tree representation (left child at `2*i + 1`, right child at `2*i + 2`).
+3. NUMERICAL OVERFLOW & PRECISION SAFETY:
+   - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
+   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step!
+   - FLOATING POINT: If problem requires decimal places, format strictly with `System.out.printf` or `String.format`.
+
+4. ROBUST MULTI-LINE INPUT PARSING:
+   - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
+   - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
+
+5. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
+   - Write concise, flat, and shallow code. Avoid unnecessary helper classes or deeply nested blocks.
+   - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, `TreeMap`) instead of writing custom Linked Node/Bucket implementations from scratch.
+
+6. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
+   - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
