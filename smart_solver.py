@@ -167,15 +167,15 @@ def clean_code(raw_text: str, language: str = "") -> str:
             continue
         clean_lines.append(line)
 
-    # 4. For class-based languages (Java, C++, C#): Sanitize trailing garbage after the main class closes
+    # 4. For class-based languages (Java, C++, C#): Sanitize trailing garbage after the code closes
     is_class_lang = (language or state.get("language", "")).lower() in ("java", "c++", "c#", "cpp")
     if is_class_lang:
         brace_count = 0
         class_started = False
         final_lines = []
-        for line in clean_lines:
+        for i, line in enumerate(clean_lines):
             stripped = line.strip()
-            if not class_started and ("class " in stripped or "interface " in stripped):
+            if not class_started and any(stripped.startswith(k) or f" {k}" in stripped for k in ("class ", "interface ", "struct ", "enum ")):
                 class_started = True
 
             final_lines.append(line)
@@ -192,59 +192,105 @@ def clean_code(raw_text: str, language: str = "") -> str:
                             brace_count -= 1
 
                 if brace_count == 0:
-                    # Top-level class has fully closed! Drop any trailing junk like '})' or stray characters!
-                    break
+                    # Check if any remaining line contains a new class, struct, interface, or function
+                    has_subsequent_code = False
+                    for next_line in clean_lines[i + 1:]:
+                        nl = next_line.strip()
+                        if any(nl.startswith(kw) or f" {kw}" in nl for kw in ("class ", "interface ", "struct ", "enum ", "public ", "static ", "void ", "int ", "long ", "def ")):
+                            has_subsequent_code = True
+                            break
+                    if not has_subsequent_code:
+                        # Top-level code has finished! Cut off trailing markdown noise, stray brackets, or commentary
+                        break
         clean_lines = final_lines
 
     return "\n".join(clean_lines).strip()
 
 
+def get_language_specific_rules(language: str) -> str:
+    lang = language.lower()
+    if lang == "java":
+        return """JAVA COMPILATION & PLATFORM RULES:
+- Standard I/O (Talentely, TCS, Codeforces, MySlate): Use `public class Main` with `public static void main(String[] args)`. Use `Scanner` (`sc.hasNext()`, `sc.nextLong()`, `sc.nextInt()`).
+- CoCubes: Use `class UserMainCode` with the exact method signature requested. Return result directly.
+- LeetCode: Use `class Solution` with the exact method signature requested. Return result directly.
+- HackerRank / GFG: Match the exact class/function name expected (e.g. `class Result` or solution function).
+- 64-Bit Safety: Use `long` for sums, differences, products, and map keys (`TreeSet<Long>`, `HashMap<Long, Integer>`).
+- Tree & Heap Roots: Return `Node` or `TreeNode` object pointer, NEVER primitive int."""
+    elif lang in ("c++", "cpp"):
+        return """C++ COMPILATION & PLATFORM RULES:
+- Standard I/O: Include `#include <bits/stdc++.h>` and `using namespace std;`. Inside `int main()`, start with `ios_base::sync_with_stdio(false); cin.tie(NULL);` and end with `return 0;`.
+- LeetCode: Use `class Solution { public: ... };`.
+- Types: ALWAYS use `long long` for values, sums, products, and map keys to prevent 32-bit overflow.
+- Modulo: Intermediate negative values must be `((a % MOD) + MOD) % MOD`.
+- Floats: Output with `cout << fixed << setprecision(X)` matching sample output."""
+    elif lang == "python":
+        return """PYTHON EXECUTION & PLATFORM RULES:
+- Standard I/O: `import sys; sys.setrecursionlimit(2000000)`. Read inputs with `tokens = sys.stdin.read().split()`.
+- LeetCode: Use `class Solution: def methodName(self, ...):`.
+- Division: Use `//` for integer division and `/` for floating point.
+- Recursion: Always include `sys.setrecursionlimit(2000000)` for deep tree or graph traversals."""
+    elif lang in ("javascript", "typescript"):
+        return """JAVASCRIPT / TYPESCRIPT RULES:
+- Standard I/O: `const fs = require('fs'); const tokens = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);`.
+- LeetCode: Use the exact function signature or `class Solution`.
+- Precision: Use `BigInt` for large integer calculations exceeding 2^53 - 1."""
+    elif lang == "c#":
+        return """C# COMPILATION RULES:
+- Standard I/O: `using System; using System.Collections.Generic; class Program { static void Main(string[] args) { ... } }`.
+- LeetCode: `public class Solution { public ... }`.
+- Types: Use `long` (Int64) for large values."""
+    elif lang == "go":
+        return """GO COMPILATION RULES:
+- Standard I/O: `package main\nimport ("bufio"\n"fmt"\n"os")\nfunc main() { scanner := bufio.NewScanner(os.Stdin); scanner.Split(bufio.ScanWords); ... }`.
+- Types: Use `int64`."""
+    return ""
+
+
 def build_text_prompt(problem_text: str, language: str) -> str:
+    lang_rules = get_language_specific_rules(language)
     return f"""You are an expert competitive programmer.
 Solve the following coding challenge in {language}.
 
-CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
+{lang_rules}
 
-1. PLATFORM & FORMAT FIDELITY:
-   - COCUBES: Keep `class UserMainCode` with the exact method signature. Return the result directly.
-   - LEETCODE: Keep `class Solution` with the exact method signature. Return the result directly.
-   - HACKERRANK / GEEKSFORGEEKS: If `class Result` or a specific function is expected, output the matching class/function.
-   - STANDARD I/O (Talentely, TCS, Codeforces, MySlate): Read using `Scanner` and print via `System.out.println`. For Java, use `public class Main` with `public static void main(String[] args)`.
+UNIVERSAL ZERO-ERROR EXECUTION DIRECTIVES:
+
+1. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
+   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
+     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet/SortedSet, largest is `last()`, second largest is `lower(last())` or remove `pollLast()` and take `last()`. NEVER call `pollFirst()` (which removes the minimum)!
+     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet/SortedSet, smallest is `first()`, second smallest is `higher(first())` or remove `pollFirst()` and take `first()`.
+   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
+   - NEGATIVE VALUES DEFENSE: NEVER initialize extremum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to negative infinity (`Long.MIN_VALUE`, `LLONG_MIN`, `-float('inf')`).
+   - PRIORITY QUEUES: Default is MIN-HEAP. For Max-Heap, you MUST use a reverse comparator!
+   - SORTING: Ascending sort places minimum at index 0 and maximum at index `n - 1`.
 
 2. DATA STRUCTURE & RETURN TYPE ACCURACY:
    - TREE & HEAP: If returning a tree root (e.g. `CreateHeap`, `buildTree`, `invertTree`), return the root `Node` / `TreeNode` object, NEVER a raw integer or array! Build complete binary tree (`left = 2*i + 1`, `right = 2*i + 2`).
    - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
    - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
 
-3. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
-   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
-     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet, largest is `set.last()`, second largest is `set.lower(set.last())` or remove `set.pollLast()` and take `set.last()`. NEVER call `pollFirst()` (which removes the minimum)!
-     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet, smallest is `set.first()`, second smallest is `set.higher(set.first())` or remove `set.pollFirst()` and take `set.first()`.
-   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
-   - NEGATIVE VALUES DEFENSE: NEVER initialize maximum or second maximum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to `Long.MIN_VALUE` / `Long.MAX_VALUE`.
-   - PRIORITY QUEUES: In Java, `new PriorityQueue<>()` is a MIN-HEAP by default. For Max-Heap, you MUST use `Collections.reverseOrder()`.
-   - SORTING: `Arrays.sort(arr)` sorts ASCENDING. The maximum is at index `n - 1`, and the minimum is at index `0`.
-
-4. NUMERICAL OVERFLOW & PRECISION SAFETY:
-   - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
+3. NUMERICAL OVERFLOW & PRECISION SAFETY:
+   - ALWAYS use 64-bit integers (`long` in Java/C#, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
    - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step. For subtraction: `(a % MOD - b % MOD + MOD) % MOD`.
-   - FLOATING POINT: If problem requires decimal places, format strictly with `System.out.printf` or `String.format`.
+   - LCM OVERFLOW: Calculate `(a / gcd(a, b)) * b`, NEVER `(a * b) / gcd(a, b)`.
+   - BINARY SEARCH: Calculate midpoint as `mid = low + (high - low) / 2` to prevent overflow.
 
-5. ROBUST MULTI-LINE INPUT PARSING:
+4. CATEGORY-SPECIFIC SAFEGUARDS:
+   - DYNAMIC PROGRAMMING: Size DP arrays `n + 1` or `(n + 1) x (m + 1)` to prevent out-of-bounds on 1-indexed constraints. Explicitly initialize base cases.
+   - GRAPHS: Check if vertices are 1-based or 0-based. If 1-based, size adjacency list to `n + 1`.
+   - STRINGS: Respect boundary slicing (e.g. Java `substring` end is exclusive). Count character frequencies with arrays or maps.
+
+5. ROBUST MULTI-LINE INPUT & OUTPUT MATCHING:
    - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
    - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
-
-6. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
-   - Write concise, flat, and shallow code. Avoid unnecessary helper classes or deeply nested blocks.
-   - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, `TreeMap`) instead of writing custom Linked Node/Bucket implementations from scratch.
-
-7. OPTIMAL COMPLEXITY (TLE PREVENTION), INDEXING & EDGE CASES:
-   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
-   - Carefully check 0-based vs 1-based indexing for positions, queries, and outputs.
    - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
+
+6. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
    - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
-8. MENTAL DRY-RUN VERIFICATION:
+7. MENTAL DRY-RUN VERIFICATION:
    - Mentally trace your solution step-by-step against Sample 1, Sample 2, and edge cases before outputting.
    - Ensure the logic outputs the EXACT sample outputs without off-by-one errors or inverted logic.
 
@@ -259,54 +305,52 @@ Problem:
 
 
 def build_vision_prompt(language: str) -> str:
+    lang_rules = get_language_specific_rules(language)
     return f"""You are an expert competitive programmer.
 Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
 
-CRITICAL ZERO-ERROR EXECUTION DIRECTIVES:
+{lang_rules}
 
-1. PLATFORM & FORMAT FIDELITY:
-   - COCUBES: If the screen shows CoCubes / `UserMainCode`, provide the EXACT `class UserMainCode` with the exact method signature. Return the result directly.
-   - LEETCODE: If the screen shows LeetCode UI / `class Solution`, provide the EXACT `class Solution` with the method signature. Return the result directly.
-   - HACKERRANK / GEEKSFORGEEKS: If `class Result` or a specific function is expected, output matching class/function.
-   - STANDARD I/O (Talentely, TCS, Codeforces, MySlate): Read from standard input (`Scanner` / `cin` / `sys.stdin`) and print matching sample output. For Java, use `public class Main` with `public static void main(String[] args)`.
+UNIVERSAL ZERO-ERROR EXECUTION DIRECTIVES:
 
-2. DATA STRUCTURE & RETURN TYPE ACCURACY:
+1. CLEAN-ROOM VISION ISOLATION & DRY-RUN:
+   - IGNORE any pre-existing code, failed attempts, or starter snippets visible in the web editor/IDE area of the image.
+   - Formulate the solution strictly from the Problem Statement, Input/Output specifications, Constraints, and Sample Cases.
+   - Mentally verify against visible Sample 1 and Sample 2 to guarantee 100% correct outputs before generating.
+
+2. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
+   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
+     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet/SortedSet, largest is `last()`, second largest is `lower(last())` or remove `pollLast()` and take `last()`. NEVER call `pollFirst()` (which removes the minimum)!
+     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet/SortedSet, smallest is `first()`, second smallest is `higher(first())` or remove `pollFirst()` and take `first()`.
+   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
+   - NEGATIVE VALUES DEFENSE: NEVER initialize extremum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to negative infinity (`Long.MIN_VALUE`, `LLONG_MIN`, `-float('inf')`).
+   - PRIORITY QUEUES: Default is MIN-HEAP. For Max-Heap, you MUST use a reverse comparator!
+   - SORTING: Ascending sort places minimum at index 0 and maximum at index `n - 1`.
+
+3. DATA STRUCTURE & RETURN TYPE ACCURACY:
    - TREE & HEAP: If returning a tree root (e.g. `CreateHeap`, `buildTree`, `invertTree`), return the root `Node` / `TreeNode` object, NEVER a raw integer or array! Build complete binary tree (`left = 2*i + 1`, `right = 2*i + 2`).
    - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
    - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
 
-3. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
-   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
-     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet, largest is `set.last()`, second largest is `set.lower(set.last())` or remove `set.pollLast()` and take `set.last()`. NEVER call `pollFirst()` (which removes the minimum)!
-     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet, smallest is `set.first()`, second smallest is `set.higher(set.first())` or remove `set.pollFirst()` and take `set.first()`.
-   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
-   - NEGATIVE VALUES DEFENSE: NEVER initialize maximum or second maximum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to `Long.MIN_VALUE` / `Long.MAX_VALUE`.
-   - PRIORITY QUEUES: In Java, `new PriorityQueue<>()` is a MIN-HEAP by default. For Max-Heap, you MUST use `Collections.reverseOrder()`.
-   - SORTING: `Arrays.sort(arr)` sorts ASCENDING. The maximum is at index `n - 1`, and the minimum is at index `0`.
-
 4. NUMERICAL OVERFLOW & PRECISION SAFETY:
-   - ALWAYS use 64-bit integers (`long` in Java, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
+   - ALWAYS use 64-bit integers (`long` in Java/C#, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
    - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step. For subtraction: `(a % MOD - b % MOD + MOD) % MOD`.
-   - FLOATING POINT: If problem requires decimal places, format strictly with `System.out.printf` or `String.format`.
+   - LCM OVERFLOW: Calculate `(a / gcd(a, b)) * b`, NEVER `(a * b) / gcd(a, b)`.
+   - BINARY SEARCH: Calculate midpoint as `mid = low + (high - low) / 2` to prevent overflow.
 
-5. ROBUST MULTI-LINE INPUT PARSING:
+5. CATEGORY-SPECIFIC SAFEGUARDS:
+   - DYNAMIC PROGRAMMING: Size DP arrays `n + 1` or `(n + 1) x (m + 1)` to prevent out-of-bounds on 1-indexed constraints. Explicitly initialize base cases.
+   - GRAPHS: Check if vertices are 1-based or 0-based. If 1-based, size adjacency list to `n + 1`.
+   - STRINGS: Respect boundary slicing (e.g. Java `substring` end is exclusive). Count character frequencies with arrays or maps.
+
+6. ROBUST MULTI-LINE INPUT & OUTPUT MATCHING:
    - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
    - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
-
-6. CONCISE, FLAT & BRACE-SAFE ARCHITECTURE:
-   - Write concise, flat, and shallow code. Avoid unnecessary helper classes or deeply nested blocks.
-   - Always use standard library collections (`java.util.HashMap`, `ArrayList`, `PriorityQueue`, `HashSet`, `TreeMap`) instead of writing custom Linked Node/Bucket implementations from scratch.
-
-7. OPTIMAL COMPLEXITY (TLE PREVENTION), INDEXING & EDGE CASES:
-   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
-   - Carefully check 0-based vs 1-based indexing for positions, queries, and outputs.
    - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
-   - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
-8. CLEAN-ROOM VISION ISOLATION & DRY-RUN:
-   - IGNORE any pre-existing code, failed attempts, or starter snippets visible in the web editor/IDE area of the image.
-   - Formulate the solution strictly from the Problem Statement, Input/Output specifications, Constraints, and Sample Cases.
-   - Mentally verify against visible Sample 1 and Sample 2 to guarantee 100% correct outputs before generating.
+7. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
+   - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
