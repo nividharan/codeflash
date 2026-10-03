@@ -70,6 +70,7 @@ def load_config():
         "sound_feedback": True,
         "paste_delay_seconds": 1.5,
         "auto_clear_editor": True,
+        "hotkey_debug": "F6",
         "hotkey_vision": "F7",
         "hotkey_solve": "F8",
         "hotkey_switch_lang": "F9",
@@ -359,6 +360,58 @@ STRICT CONSTRAINTS:
 """
 
 
+def build_debug_vision_prompt(language: str) -> str:
+    lang_rules = get_language_specific_rules(language)
+    return f"""You are an elite software debugger and algorithm engineer.
+Look at the attached screen image carefully. The screen displays active code in {language} alongside a compiler error, runtime exception, failed test case, or incorrect output.
+
+{lang_rules}
+
+YOUR DEBUGGING OBJECTIVES:
+1. Examine the user's existing code and pinpoint the exact syntax error, runtime crash, logic bug, or failed test case.
+2. Formulate the minimal, correct fix while preserving the user's class structure, method signatures, and naming conventions.
+3. Verify that the fixed code produces the correct expected output for the test inputs shown on screen.
+4. Enforce 64-bit numerical overflow safety (long / long long), robust I/O parsing, and optimal complexity.
+
+OUTPUT FORMAT REQUIREMENTS:
+At the very top, provide a concise 2-line diagnosis block:
+[DIAGNOSIS]
+Bug: <concise 1-sentence explanation of what was wrong>
+Expected Output: <the exact output the code should produce for the test input>
+[/DIAGNOSIS]
+
+Immediately follow with the complete, corrected source code inside ```{language.lower()} ```.
+Do NOT write ANY comments (no // or /* */) inside the code.
+Do NOT write any explanations or text outside the [DIAGNOSIS] block and the code block.
+"""
+
+
+def build_debug_text_prompt(code_and_error: str, language: str) -> str:
+    lang_rules = get_language_specific_rules(language)
+    return f"""You are an elite software debugger and algorithm engineer.
+Analyze the following code and error/traceback in {language}:
+
+{code_and_error}
+
+{lang_rules}
+
+YOUR DEBUGGING OBJECTIVES:
+1. Identify the exact root cause of the error or incorrect test case output.
+2. Correct the code while preserving existing variable names and structure.
+3. Enforce 64-bit safety, optimal complexity, and zero-error test pass rate.
+
+OUTPUT FORMAT REQUIREMENTS:
+At the very top, provide a concise 2-line diagnosis block:
+[DIAGNOSIS]
+Bug: <concise 1-sentence explanation of what was wrong>
+Expected Output: <the exact output the code should produce for the failing input>
+[/DIAGNOSIS]
+
+Immediately follow with the complete, corrected source code inside ```{language.lower()} ```.
+Do NOT write ANY comments (no // or /* */) inside the code.
+"""
+
+
 def image_to_genai_part(img: Image.Image) -> types.Part:
     max_dimension = 1280
     w, h = img.size
@@ -517,6 +570,81 @@ def solve_with_gemini(client, contents, prompt_desc: str):
     print(f"[✓] SUCCESS: {lang} solution inserted into editor via {mode.upper()} mode!\n")
 
 
+def debug_with_gemini(client, contents, prompt_desc: str):
+    lang = state["language"]
+    mode = state["mode"]
+    print(f"\n[🐞] Debugging active code ({prompt_desc}) in {lang} via Gemini AI...")
+
+    response = None
+    last_error = None
+
+    gen_config = types.GenerateContentConfig(
+        temperature=0.0,
+        max_output_tokens=4096,
+        system_instruction=(
+            f"You are an elite software debugger and algorithm engineer. "
+            f"Analyze the provided {lang} code and error/output. "
+            f"First output a diagnosis block:\n"
+            f"[DIAGNOSIS]\n"
+            f"Bug: <exact reason why it failed>\n"
+            f"Expected Output: <correct output for the failing input or test case>\n"
+            f"[/DIAGNOSIS]\n"
+            f"Then output the complete fixed {lang} source code in a single ```{lang.lower()} ``` block without any comments."
+        )
+    )
+
+    for i, model_name in enumerate(MODELS_TO_TRY):
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=gen_config
+            )
+            if response and response.text:
+                if i > 0:
+                    MODELS_TO_TRY.insert(0, MODELS_TO_TRY.pop(i))
+                print(f"[✓] Debug diagnosis completed via {model_name}")
+                break
+        except Exception as e:
+            last_error = e
+            continue
+
+    if not response or not response.text:
+        print(f"[!] Error analyzing code across models: {last_error}")
+        play_sound("error")
+        return
+
+    raw = response.text
+
+    # Extract [DIAGNOSIS] if present
+    diag_match = re.search(r"\[DIAGNOSIS\](.*?)\[/DIAGNOSIS\]", raw, re.DOTALL | re.IGNORECASE)
+    if diag_match:
+        diag_text = diag_match.group(1).strip()
+        print("\n" + "═" * 65)
+        print("🔍 CODEFLASH DEBUG REPORT & DRY-RUN ANALYSIS:")
+        print("─" * 65)
+        for line in diag_text.splitlines():
+            line = line.strip()
+            if line:
+                if line.lower().startswith("bug:"):
+                    print(f"  ❌ {line}")
+                elif line.lower().startswith("expected output:"):
+                    print(f"  📊 {line}")
+                else:
+                    print(f"  • {line}")
+        print("═" * 65 + "\n")
+
+    code = clean_code(raw, lang)
+
+    delay = state["delay"]
+    print(f"[⚡] Auto-patching editor with corrected code in {delay}s via [{mode.upper()}] mode...")
+    time.sleep(delay)
+
+    insert_code(code, mode)
+    play_sound("success")
+    print(f"[✓] SUCCESS: Fixed {lang} code patched into editor via {mode.upper()} mode!\n")
+
+
 def solve_text_worker(client):
     if state["is_busy"]:
         print("[!] Solver is already running. Please wait for current operation to finish.")
@@ -605,18 +733,61 @@ def trigger_solve_vision(client):
     threading.Thread(target=solve_vision_worker, args=(client,), daemon=True).start()
 
 
+def debug_vision_worker(client):
+    if state["is_busy"]:
+        print("[!] Solver is already running. Please wait for current operation to finish.")
+        return
+
+    state["is_busy"] = True
+    try:
+        print("\n[🐞] F6 detected! Capturing screen for Debug Analysis & In-Place Auto-Patch...")
+        play_sound("start")
+
+        screenshot = None
+        try:
+            screenshot = ImageGrab.grab()
+        except Exception:
+            try:
+                cb_image = ImageGrab.grabclipboard()
+                if isinstance(cb_image, Image.Image):
+                    screenshot = cb_image
+            except Exception:
+                pass
+
+        if not screenshot or not isinstance(screenshot, Image.Image):
+            print("[!] Could not capture screen image.")
+            play_sound("error")
+            return
+
+        img_part = image_to_genai_part(screenshot)
+        prompt = build_debug_vision_prompt(state["language"])
+        debug_with_gemini(client, [img_part, prompt], prompt_desc="Screen Debug & Patch")
+
+    except Exception as err:
+        print(f"[!] Unexpected error during debug session: {err}")
+        play_sound("error")
+    finally:
+        state["is_busy"] = False
+
+
+def trigger_debug_vision(client):
+    threading.Thread(target=debug_vision_worker, args=(client,), daemon=True).start()
+
+
 def print_banner(config: dict):
     print("=" * 70)
     print(">> ⚡ CODEFLASH - MULTIMODAL AI PAIR PROGRAMMER & KEYSTROKE AUTOMATION ENGINE")
     print("=" * 70)
     print(f"  • Current Language:      [ {state['language']} ]  (Press {config.get('hotkey_switch_lang', 'F9')} to switch)")
     print(f"  • Typing Profile:        [ {state['mode'].upper()} ]  (Press {config.get('hotkey_switch_mode', 'F10')} to switch)")
+    print(f"  • Debug & Auto-Patch:    [ {config.get('hotkey_debug', 'F6')} ] ──▶ (Diagnoses Bug, Shows Expected Output & In-Place Patches Code)")
     print(f"  • Vision Solve (Screen): [ {config.get('hotkey_vision', 'F7')} ] ──▶ (Zero Copying Needed!)")
     print(f"  • Solve from Clipboard:  [ {config.get('hotkey_solve', 'F8')} ] ──▶ (Text or Win+Shift+S Snip)")
     print(f"  • Auto-Replace Editor:   [ {'ON' if state['auto_clear'] else 'OFF'} ]")
     print(f"  • Sound Feedback:        [ {'ON' if state['sound'] else 'OFF'} ]")
     print("-" * 70)
     print("How to use:")
+    print("  ⭐ Debug Existing Code:        Show code + error on screen and press [ F6 ].")
     print("  ⭐ Option A (Screen Reading):  Have problem on screen and press [ F7 ].")
     print("  ⭐ Option B (Snipped Image):   Snip with Win + Shift + S, then press [ F8 ].")
     print("  ⭐ Option C (Standard Text):   Copy text with Ctrl + C, then press [ F8 ].")
@@ -635,11 +806,13 @@ def main():
 
     print_banner(config)
 
+    hk_debug = config.get("hotkey_debug", "F6")
     hk_vision = config.get("hotkey_vision", "F7")
     hk_solve = config.get("hotkey_solve", "F8")
     hk_lang = config.get("hotkey_switch_lang", "F9")
     hk_mode = config.get("hotkey_switch_mode", "F10")
 
+    keyboard.add_hotkey(hk_debug, lambda: trigger_debug_vision(client), suppress=True)
     keyboard.add_hotkey(hk_vision, lambda: trigger_solve_vision(client), suppress=True)
     keyboard.add_hotkey(hk_solve, lambda: trigger_solve_text(client), suppress=True)
     keyboard.add_hotkey(hk_lang, cycle_language, suppress=True)

@@ -5,6 +5,7 @@
   "sound_feedback": true,
   "paste_delay_seconds": 1.5,
   "auto_clear_editor": true,
+  "hotkey_debug": "F6",
   "hotkey_vision": "F7",
   "hotkey_solve": "F8",
   "hotkey_switch_lang": "F9",

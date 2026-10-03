@@ -68,8 +68,9 @@ Designed for accessibility and developer productivity across diverse computing e
 
 | Hotkey | Action | Description |
 | :--- | :--- | :--- |
-| **`F7`** | **Visual Screen Solve** | Captures active display, analyzes problem, and streams code to active editor |
-| **`F8`** | **Clipboard Solve** | Processes text copied to clipboard (`Ctrl+C`) or snipped image (`Win+Shift+S`) |
+| **`F6`** | **Visual Debug & Auto-Patch** | Captures code + error on screen, prints diagnosis & expected output, and in-place patches editor |
+| **`F7`** | **Visual Screen Solve** | Captures active display, analyzes problem, and streams fresh code to active editor |
+| **`F8`** | **Clipboard Solve** | Processes problem text (`Ctrl+C`) or snipped image (`Win+Shift+S`) from clipboard |
 | **`F9`** | **Cycle Target Language** | Cycles through Java ➔ Python ➔ C++ ➔ JavaScript ➔ TypeScript ➔ C# ➔ Go |
 | **`F10`** | **Cycle Typing Profile** | Cycles through Instant (Paste) ➔ Ultra (Direct Stream) ➔ Human Cadence |
 
@@ -106,6 +107,7 @@ Edit `config.json`:
   "sound_feedback": true,
   "paste_delay_seconds": 1.5,
   "auto_clear_editor": true,
+  "hotkey_debug": "F6",
   "hotkey_vision": "F7",
   "hotkey_solve": "F8",
   "hotkey_switch_lang": "F9",
