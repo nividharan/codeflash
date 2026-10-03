@@ -1,4 +1,15 @@
 import sys
+
+if sys.version_info < (3, 10):
+    print("\n" + "=" * 65)
+    print("❌ ERROR: CodeFlash requires Python 3.10 or higher.")
+    print(f"   Current Python version: {sys.version.split()[0]} ({sys.executable})")
+    print("   The official Google GenAI SDK ('google-genai') requires Python >= 3.10.")
+    print("   Please run CodeFlash with Python 3.10+: py -3.10 smart_solver.py")
+    print("   Or install Python 3.11+: winget install Python.Python.3.11")
+    print("=" * 65 + "\n")
+    sys.exit(1)
+
 import time
 import os
 import json
@@ -11,8 +22,17 @@ import pyautogui
 import pyperclip
 import keyboard
 from PIL import Image, ImageGrab
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except ImportError as e:
+    print("\n" + "=" * 65)
+    print("❌ ERROR: Missing required dependency: google-genai")
+    print("   Please install requirements with:")
+    print("     pip install -r requirements.txt")
+    print("   (Ensure you are running Python 3.10 or higher!)")
+    print("=" * 65 + "\n")
+    sys.exit(1)
 
 try:
     import winsound

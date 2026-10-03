@@ -1,7 +1,7 @@
 # ⚡ CodeFlash — AI-Powered Developer Productivity & Accessibility Engine
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/AI-Google%20Gemini%20Multimodal-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini AI" />
   <img src="https://img.shields.io/badge/OS%20Automation-Win32%20Keystroke%20Engine-FF6F00?style=for-the-badge" alt="OS Automation" />
   <img src="https://img.shields.io/badge/Languages-7%20Supported-00C7FF?style=for-the-badge" alt="Languages" />
@@ -79,7 +79,7 @@ Designed for accessibility and developer productivity across diverse computing e
 ## 🛠️ Quick Start
 
 ### 1. Prerequisites
-- Python 3.8 or higher
+- Python 3.10 or higher (required by `google-genai` SDK)
 - Google Gemini API Key ([Get one free from Google AI Studio](https://aistudio.google.com/))
 
 ### 2. Installation
