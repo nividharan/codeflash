@@ -49,17 +49,8 @@
 - Uses Google Gemini Multimodal Vision API to parse complex technical specifications, constraints, diagrams, and mathematical problem statements directly from active displays without requiring manual copying or OCR preprocessing.
 - Operates in a **Clean-Room Isolation** mode: extracts core specifications while ignoring extraneous editor clutter, previous failed attempts, or UI noise.
 
-### 2. 🌐 Multi-Language Deterministic Engine
-CodeFlash features dynamic language synthesis supporting 7 industry-standard languages with automated zero-error directives:
-
-| Language | Compilation & Runtime Directives |
-| :--- | :--- |
-| **Java** | `public class Main` with fast `Scanner` token streams, 64-bit numerical overflow defense (`long`), tree/heap reference fidelity (`Node`/`TreeNode`), and multi-class structure preservation. |
-| **C++** | Fast I/O (`ios_base::sync_with_stdio(false)`), `<bits/stdc++.h>`, 64-bit `long long` precision, and negative-safe modulo arithmetic. |
-| **Python** | High-performance `sys.stdin.read().split()` streaming, extended recursion limits (`sys.setrecursionlimit(2000000)`), and integer precision handling. |
-| **JavaScript / TypeScript** | Atomic buffer reading (`fs.readFileSync(0)`), callback error elimination, and `BigInt` precision handling. |
-| **C#** | Standard class architecture (`class Program` / `class Solution`) with 64-bit Int64 support. |
-| **Go** | Buffered token scanning (`bufio.ScanWords`) with 64-bit integer calculations. |
+### 2. 🌐 Multi-Language Architecture
+CodeFlash supports dynamic, idiomatic code generation across 7 industry-standard languages: **Java, Python, C++, TypeScript, JavaScript, C#, and Go**, with automated numerical precision handling and platform-specific standard I/O streaming.
 
 ### 3. ⌨️ Low-Level OS Keystroke Automation
 Designed for accessibility and developer productivity across diverse computing environments:
