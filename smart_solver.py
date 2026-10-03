@@ -462,7 +462,7 @@ def cycle_mode():
 
     mode_display = {
         "instant": "⚡ INSTANT (0.1s Clipboard Paste)",
-        "ultra": "🚀 ULTRA (Keystroke Burst - Anti-Paste Bypass)",
+        "ultra": "🚀 ULTRA (High-Speed Direct Keystroke Emulation)",
         "human": "👤 HUMAN (Natural Typing Cadence with Jitter)"
     }
 
@@ -607,7 +607,7 @@ def trigger_solve_vision(client):
 
 def print_banner(config: dict):
     print("=" * 70)
-    print(">> ⚡ CODEFLASH - UNIVERSAL AI COMPANION (TEXT & VISION) & TYPER")
+    print(">> ⚡ CODEFLASH - MULTIMODAL AI PAIR PROGRAMMER & KEYSTROKE AUTOMATION ENGINE")
     print("=" * 70)
     print(f"  • Current Language:      [ {state['language']} ]  (Press {config.get('hotkey_switch_lang', 'F9')} to switch)")
     print(f"  • Typing Profile:        [ {state['mode'].upper()} ]  (Press {config.get('hotkey_switch_mode', 'F10')} to switch)")
@@ -617,7 +617,7 @@ def print_banner(config: dict):
     print(f"  • Sound Feedback:        [ {'ON' if state['sound'] else 'OFF'} ]")
     print("-" * 70)
     print("How to use:")
-    print("  ⭐ Option A (Copy Disabled?): Have problem on screen and press [ F7 ].")
+    print("  ⭐ Option A (Screen Reading):  Have problem on screen and press [ F7 ].")
     print("  ⭐ Option B (Snipped Image):   Snip with Win + Shift + S, then press [ F8 ].")
     print("  ⭐ Option C (Standard Text):   Copy text with Ctrl + C, then press [ F8 ].")
     print("=" * 70)
