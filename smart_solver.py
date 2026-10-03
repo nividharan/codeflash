@@ -1,8 +1,10 @@
+import sys
 import time
 import os
 import json
 import re
 import io
+import ctypes
 import random
 import threading
 import pyautogui
@@ -363,20 +365,21 @@ STRICT CONSTRAINTS:
 def build_debug_vision_prompt(language: str) -> str:
     lang_rules = get_language_specific_rules(language)
     return f"""You are an elite software debugger and algorithm engineer.
-Look at the attached screen image carefully. The screen displays active code in {language} alongside a compiler error, runtime exception, failed test case, or incorrect output.
+Look at the attached screen image carefully. The screen displays active code in {language} and may also show a compiler error, runtime exception, failed test case, or incorrect output.
 
 {lang_rules}
 
-YOUR DEBUGGING OBJECTIVES:
+YOUR DEBUGGING & EXECUTION OBJECTIVES:
 1. Examine the user's existing code and pinpoint the exact syntax error, runtime crash, logic bug, or failed test case.
-2. Formulate the minimal, correct fix while preserving the user's class structure, method signatures, and naming conventions.
-3. Verify that the fixed code produces the correct expected output for the test inputs shown on screen.
+2. Determine what the code CURRENTLY outputs or throws, and what it SHOULD output (Expected Output) for the given test case or input.
+3. Formulate the minimal, correct fix while preserving the user's class structure, method signatures, and naming conventions.
 4. Enforce 64-bit numerical overflow safety (long / long long), robust I/O parsing, and optimal complexity.
 
 OUTPUT FORMAT REQUIREMENTS:
-At the very top, provide a concise 2-line diagnosis block:
+At the very top, provide a concise diagnosis & output report block:
 [DIAGNOSIS]
-Bug: <concise 1-sentence explanation of what was wrong>
+Bug: <concise explanation of what was wrong>
+Current Output: <what the current code produces or error thrown>
 Expected Output: <the exact output the code should produce for the test input>
 [/DIAGNOSIS]
 
@@ -395,21 +398,109 @@ Analyze the following code and error/traceback in {language}:
 
 {lang_rules}
 
-YOUR DEBUGGING OBJECTIVES:
+YOUR DEBUGGING & EXECUTION OBJECTIVES:
 1. Identify the exact root cause of the error or incorrect test case output.
-2. Correct the code while preserving existing variable names and structure.
-3. Enforce 64-bit safety, optimal complexity, and zero-error test pass rate.
+2. Determine what the code CURRENTLY outputs or throws, and what it SHOULD output (Expected Output).
+3. Correct the code while preserving existing variable names and structure.
+4. Enforce 64-bit safety, optimal complexity, and zero-error test pass rate.
 
 OUTPUT FORMAT REQUIREMENTS:
-At the very top, provide a concise 2-line diagnosis block:
+At the very top, provide a concise diagnosis & output report block:
 [DIAGNOSIS]
-Bug: <concise 1-sentence explanation of what was wrong>
+Bug: <concise explanation of what was wrong>
+Current Output: <what the current code produces or error thrown>
 Expected Output: <the exact output the code should produce for the failing input>
 [/DIAGNOSIS]
 
 Immediately follow with the complete, corrected source code inside ```{language.lower()} ```.
 Do NOT write ANY comments (no // or /* */) inside the code.
 """
+
+
+def is_code_or_error(text: str) -> bool:
+    if not text or len(text.strip()) < 10:
+        return False
+    indicators = [
+        "error:", "exception", "traceback", "syntaxerror", "nullpointerexception",
+        "wrong answer", "time limit exceeded", "runtime error", "compilation error",
+        "failed", "expected:", "actual:", "line ", "at line",
+        "public class ", "def ", "#include <", "import java", "public static void main",
+        "class Solution", "class UserMainCode", "int main(", "fun main(", "System.out",
+        "console.log", "cout <<", "printf(", "println!"
+    ]
+    low = text.lower()
+    return any(ind in low for ind in indicators)
+
+
+def capture_screen() -> Image.Image:
+    # 1. Native Win32 GDI BitBlt capture (works reliably across multiple monitors & headless states)
+    if sys.platform == "win32":
+        try:
+            user32 = ctypes.windll.user32
+            gdi32 = ctypes.windll.gdi32
+
+            SM_XVIRTUALSCREEN = 76
+            SM_YVIRTUALSCREEN = 77
+            SM_CXVIRTUALSCREEN = 78
+            SM_CYVIRTUALSCREEN = 79
+
+            x = user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
+            y = user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
+            w = user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)
+            h = user32.GetSystemMetrics(SM_CYVIRTUALSCREEN)
+
+            if w <= 0 or h <= 0:
+                w = user32.GetSystemMetrics(0)
+                h = user32.GetSystemMetrics(1)
+                x, y = 0, 0
+
+            hdesktop = user32.GetDesktopWindow()
+            hdc_screen = user32.GetWindowDC(hdesktop)
+            hdc_mem = gdi32.CreateCompatibleDC(hdc_screen)
+            hbmp = gdi32.CreateCompatibleBitmap(hdc_screen, w, h)
+
+            gdi32.SelectObject(hdc_mem, hbmp)
+            gdi32.BitBlt(hdc_mem, 0, 0, w, h, hdc_screen, x, y, 0x00CC0020 | 0x40000000)
+
+            bmi = bytearray(40)
+            bmi[0:4] = (40).to_bytes(4, "little")
+            bmi[4:8] = (w).to_bytes(4, "little", signed=True)
+            bmi[8:12] = (-h).to_bytes(4, "little", signed=True)
+            bmi[12:14] = (1).to_bytes(2, "little")
+            bmi[14:16] = (32).to_bytes(2, "little")
+
+            buf = bytearray(w * h * 4)
+            c_buf = (ctypes.c_char * len(buf)).from_buffer(buf)
+
+            lines = gdi32.GetDIBits(hdc_mem, hbmp, 0, h, c_buf, (ctypes.c_char * 40).from_buffer(bmi), 0)
+
+            gdi32.DeleteObject(hbmp)
+            gdi32.DeleteDC(hdc_mem)
+            user32.ReleaseDC(hdesktop, hdc_screen)
+
+            if lines > 0:
+                im = Image.frombuffer("RGBA", (w, h), buf, "raw", "BGRA", 0, 1)
+                return im.convert("RGB")
+        except Exception:
+            pass
+
+    # 2. Fallback to PIL ImageGrab
+    try:
+        im = ImageGrab.grab()
+        if im:
+            return im
+    except Exception:
+        pass
+
+    # 3. Fallback to clipboard image
+    try:
+        cb = ImageGrab.grabclipboard()
+        if isinstance(cb, Image.Image):
+            return cb
+    except Exception:
+        pass
+
+    return None
 
 
 def image_to_genai_part(img: Image.Image) -> types.Part:
@@ -628,6 +719,8 @@ def debug_with_gemini(client, contents, prompt_desc: str):
             if line:
                 if line.lower().startswith("bug:"):
                     print(f"  ❌ {line}")
+                elif line.lower().startswith("current output:"):
+                    print(f"  ⚠️ {line}")
                 elif line.lower().startswith("expected output:"):
                     print(f"  📊 {line}")
                 else:
@@ -658,6 +751,11 @@ def solve_text_worker(client):
         # 1. Check for text in clipboard
         question = pyperclip.paste().strip()
         if question and len(question) >= 5:
+            if is_code_or_error(question):
+                print("[🐞] Detected code or error trace in clipboard! Routing to Debugger...")
+                prompt = build_debug_text_prompt(question, state["language"])
+                debug_with_gemini(client, prompt, prompt_desc="Clipboard Debug & Patch")
+                return
             prompt = build_text_prompt(question, state["language"])
             solve_with_gemini(client, prompt, prompt_desc="Text Mode")
             return
@@ -675,9 +773,10 @@ def solve_text_worker(client):
             pass
 
         print("[!] Clipboard is empty. Either:")
-        print("    • Copy problem text (Ctrl + C), OR")
+        print("    • Copy problem text or code to debug (Ctrl + C), OR")
         print("    • Take a snip of problem (Win + Shift + S), OR")
-        print("    • Press [ F7 ] to automatically capture full screen with Vision AI!")
+        print("    • Press [ F7 ] to solve problem from screen, OR")
+        print("    • Press [ F6 ] to debug active code on screen!")
         play_sound("error")
 
     except Exception as err:
@@ -697,18 +796,7 @@ def solve_vision_worker(client):
         print("\n[📸] F7 detected! Capturing screen for Vision AI (No Copy Required)...")
         play_sound("start")
 
-        screenshot = None
-        try:
-            screenshot = ImageGrab.grab()
-        except Exception:
-            # Fallback to clipboard image if direct grab failed
-            try:
-                cb_image = ImageGrab.grabclipboard()
-                if isinstance(cb_image, Image.Image):
-                    screenshot = cb_image
-            except Exception:
-                pass
-
+        screenshot = capture_screen()
         if not screenshot or not isinstance(screenshot, Image.Image):
             print("[!] Could not capture screen image. You can snip the problem with Win+Shift+S and press F8!")
             play_sound("error")
@@ -740,25 +828,42 @@ def debug_vision_worker(client):
 
     state["is_busy"] = True
     try:
-        print("\n[🐞] F6 detected! Capturing screen for Debug Analysis & In-Place Auto-Patch...")
+        print("\n[🐞] F6 detected! Analyzing code defects & dry-run output...")
         play_sound("start")
 
-        screenshot = None
+        # 1. Check if user copied code or error trace to clipboard first
+        clip_text = ""
         try:
-            screenshot = ImageGrab.grab()
+            clip_text = pyperclip.paste().strip()
         except Exception:
-            try:
-                cb_image = ImageGrab.grabclipboard()
-                if isinstance(cb_image, Image.Image):
-                    screenshot = cb_image
-            except Exception:
-                pass
+            pass
 
+        if clip_text and is_code_or_error(clip_text):
+            print("[📋] Found code or error trace in clipboard! Debugging clipboard text...")
+            prompt = build_debug_text_prompt(clip_text, state["language"])
+            debug_with_gemini(client, prompt, prompt_desc="Clipboard Debug & Patch")
+            return
+
+        # 2. Check if clipboard has a snipped image (Win + Shift + S)
+        try:
+            cb_image = ImageGrab.grabclipboard()
+            if isinstance(cb_image, Image.Image):
+                print("[📸] Detected snipped image in clipboard! Debugging image...")
+                img_part = image_to_genai_part(cb_image)
+                prompt = build_debug_vision_prompt(state["language"])
+                debug_with_gemini(client, [img_part, prompt], prompt_desc="Clipboard Snip Debug & Patch")
+                return
+        except Exception:
+            pass
+
+        # 3. Capture screen via native Win32 GDI capture
+        screenshot = capture_screen()
         if not screenshot or not isinstance(screenshot, Image.Image):
-            print("[!] Could not capture screen image.")
+            print("[!] Could not capture screen image. Please copy code/error (Ctrl+C) and press F6!")
             play_sound("error")
             return
 
+        print("[📸] Screen captured! Running Visual Debugging & Output Inspection...")
         img_part = image_to_genai_part(screenshot)
         prompt = build_debug_vision_prompt(state["language"])
         debug_with_gemini(client, [img_part, prompt], prompt_desc="Screen Debug & Patch")
