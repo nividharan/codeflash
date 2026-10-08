@@ -1,5 +1,11 @@
 import sys
 
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 if sys.version_info < (3, 10):
     print("\n" + "=" * 65)
     print("❌ ERROR: CodeFlash requires Python 3.10 or higher.")
@@ -148,7 +154,8 @@ def get_api_key(config: dict) -> str:
 
 def clean_code(raw_text: str, language: str = "") -> str:
     text = raw_text.strip()
-    
+    lang = (language or state.get("language", "Java")).lower()
+
     # 1. Match all ``` code blocks and pick the largest one (the actual solution code)
     blocks = re.findall(r"```(?:[a-zA-Z0-9_\+\#-]*\s*\r?\n)?(.*?)\r?\n```", text, re.DOTALL)
     if blocks:
@@ -169,88 +176,108 @@ def clean_code(raw_text: str, language: str = "") -> str:
         start_idx = -1
         for i, line in enumerate(lines):
             l = line.strip()
-            if l.startswith(("import ", "package ", "public class ", "class ", "#include", "def ", "using ")):
+            if l.startswith(("import ", "package ", "public class ", "class ", "#include", "def ", "using ", "package main")):
                 start_idx = i
                 break
         if start_idx != -1:
             text = "\n".join(lines[start_idx:]).strip()
 
-    # 2. Remove multi-line block comments /* ... */
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    # Strip any stray closing markdown fence at the end
+    text = re.sub(r"\s*```+\s*$", "", text).strip()
 
-    # 3. Filter out single-line comments (// and #) that the AI dumps its thought process into
-    is_python = (language or state.get("language", "")).lower() == "python"
-    clean_lines = []
-    for line in text.splitlines():
-        trimmed = line.strip()
-        # Skip comment-only lines
-        if trimmed.startswith("//") or trimmed.startswith("/*"):
-            continue
-        if is_python and trimmed.startswith("#"):
-            continue
-        clean_lines.append(line)
+    # 2. Ensure essential standard imports / headers
+    if lang == "java":
+        has_util = "java.util" in text
+        has_io = "java.io" in text
+        needed = []
+        if not has_util and any(kw in text for kw in ("Scanner", "List", "ArrayList", "Map", "HashMap", "Set", "HashSet", "TreeSet", "Arrays", "Collections", "PriorityQueue", "Queue", "Deque")):
+            needed.append("import java.util.*;")
+        if not has_io and any(kw in text for kw in ("BufferedReader", "InputStreamReader", "PrintWriter", "IOException")):
+            needed.append("import java.io.*;")
+        if needed:
+            text = "\n".join(needed) + "\n" + text
 
-    # 4. For class-based languages (Java, C++, C#): Sanitize trailing garbage after the code closes
-    is_class_lang = (language or state.get("language", "")).lower() in ("java", "c++", "c#", "cpp")
-    if is_class_lang:
-        brace_count = 0
-        class_started = False
-        final_lines = []
-        for i, line in enumerate(clean_lines):
-            stripped = line.strip()
-            if not class_started and any(stripped.startswith(k) or f" {k}" in stripped for k in ("class ", "interface ", "struct ", "enum ")):
-                class_started = True
+    elif lang in ("c++", "cpp"):
+        if "#include" not in text:
+            text = "#include <bits/stdc++.h>\nusing namespace std;\n\n" + text
 
-            final_lines.append(line)
+    # 3. Check and guarantee brace balancing for brace-based languages (Java, C++, C, C#, JS, TS)
+    if lang in ("java", "c++", "cpp", "c", "c#", "javascript", "typescript"):
+        i = 0
+        n = len(text)
+        open_braces = 0
+        close_braces = 0
+        in_s_quote = False
+        in_d_quote = False
+        in_line_comment = False
+        in_block_comment = False
 
-            if class_started:
-                in_quote = False
-                for ch in line:
-                    if ch == '"':
-                        in_quote = not in_quote
-                    elif not in_quote:
-                        if ch == '{':
-                            brace_count += 1
-                        elif ch == '}':
-                            brace_count -= 1
+        while i < n:
+            ch = text[i]
+            # Handle escapes inside quotes
+            if (in_s_quote or in_d_quote) and ch == '\\':
+                i += 2
+                continue
 
-                if brace_count == 0:
-                    # Check if any remaining line contains a new class, struct, interface, or function
-                    has_subsequent_code = False
-                    for next_line in clean_lines[i + 1:]:
-                        nl = next_line.strip()
-                        if any(nl.startswith(kw) or f" {kw}" in nl for kw in ("class ", "interface ", "struct ", "enum ", "public ", "static ", "void ", "int ", "long ", "def ")):
-                            has_subsequent_code = True
-                            break
-                    if not has_subsequent_code:
-                        # Top-level code has finished! Cut off trailing markdown noise, stray brackets, or commentary
-                        break
-        clean_lines = final_lines
+            if in_line_comment:
+                if ch == '\n':
+                    in_line_comment = False
+            elif in_block_comment:
+                if ch == '*' and i + 1 < n and text[i + 1] == '/':
+                    in_block_comment = False
+                    i += 1
+            elif in_s_quote:
+                if ch == "'":
+                    in_s_quote = False
+            elif in_d_quote:
+                if ch == '"':
+                    in_d_quote = False
+            else:
+                if ch == '/' and i + 1 < n and text[i + 1] == '/':
+                    in_line_comment = True
+                    i += 1
+                elif ch == '/' and i + 1 < n and text[i + 1] == '*':
+                    in_block_comment = True
+                    i += 1
+                elif ch == "'":
+                    in_s_quote = True
+                elif ch == '"':
+                    in_d_quote = True
+                elif ch == '{':
+                    open_braces += 1
+                elif ch == '}':
+                    close_braces += 1
+            i += 1
 
-    return "\n".join(clean_lines).strip()
+        # Automatically close any open unclosed braces so code never fails compilation
+        if open_braces > close_braces:
+            text = text.rstrip() + ("\n}" * (open_braces - close_braces))
+
+    return text.strip()
+
 
 
 def get_language_specific_rules(language: str) -> str:
     lang = language.lower()
     if lang == "java":
         return """JAVA COMPILATION & PLATFORM RULES:
-- Standard I/O (Talentely, TCS, Codeforces, MySlate): Use `public class Main` with `public static void main(String[] args)`. Use `Scanner` (`sc.hasNext()`, `sc.nextLong()`, `sc.nextInt()`).
-- CoCubes: Use `class UserMainCode` with the exact method signature requested. Return result directly.
-- LeetCode: Use `class Solution` with the exact method signature requested. Return result directly.
-- HackerRank / GFG: Match the exact class/function name expected (e.g. `class Result` or solution function).
-- 64-Bit Safety: Use `long` for sums, differences, products, and map keys (`TreeSet<Long>`, `HashMap<Long, Integer>`).
-- Tree & Heap Roots: Return `Node` or `TreeNode` object pointer, NEVER primitive int."""
+- LeetCode / Function Platforms: Use `class Solution` with the exact method signature requested. Return the result directly. Do NOT write main().
+- Standard I/O (Talentely, TCS, Codeforces, HackerRank, CodeChef, MySlate): Use `import java.util.*;\nimport java.io.*;\npublic class Main` (or matching class) with `public static void main(String[] args)`.
+- Multi-Test Case Handling: If input states 'T test cases', read T and loop `while (T-- > 0)` or `while (sc.hasNext())`.
+- 64-Bit Overflow Immunity: ALWAYS cast before multiplying: `(long) a * b`. Use `long` for all sum, product, and hash map accumulators when N >= 10^5 or elements <= 10^9.
+- Modulo Arithmetic: `((a % MOD - b % MOD) + MOD) % MOD`. Apply modulo at every addition and multiplication step.
+- Tree & Heap Roots: Return the `TreeNode` / `Node` object pointer, NEVER primitive int."""
     elif lang in ("c++", "cpp"):
         return """C++ COMPILATION & PLATFORM RULES:
 - Standard I/O: Include `#include <bits/stdc++.h>` and `using namespace std;`. Inside `int main()`, start with `ios_base::sync_with_stdio(false); cin.tie(NULL);` and end with `return 0;`.
 - LeetCode: Use `class Solution { public: ... };`.
-- Types: ALWAYS use `long long` for values, sums, products, and map keys to prevent 32-bit overflow.
+- Types: ALWAYS use `long long` for values, sums, products, and map keys to prevent 32-bit overflow. Cast: `1LL * a * b`.
 - Modulo: Intermediate negative values must be `((a % MOD) + MOD) % MOD`.
 - Floats: Output with `cout << fixed << setprecision(X)` matching sample output."""
     elif lang == "python":
         return """PYTHON EXECUTION & PLATFORM RULES:
 - Standard I/O: `import sys; sys.setrecursionlimit(2000000)`. Read inputs with `tokens = sys.stdin.read().split()`.
-- LeetCode: Use `class Solution: def methodName(self, ...):`.
+- LeetCode: Use `class Solution: def methodName(self, ...):`. Match exact method signature.
 - Division: Use `//` for integer division and `/` for floating point.
 - Recursion: Always include `sys.setrecursionlimit(2000000)` for deep tree or graph traversals."""
     elif lang in ("javascript", "typescript"):
@@ -272,50 +299,38 @@ def get_language_specific_rules(language: str) -> str:
 
 def build_text_prompt(problem_text: str, language: str) -> str:
     lang_rules = get_language_specific_rules(language)
-    return f"""You are an expert competitive programmer.
-Solve the following coding challenge in {language}.
+    return f"""You are an elite competitive programmer and algorithm engineer.
+Solve the following coding challenge in {language} with 100% correct test case pass rate and zero compilation errors.
 
 {lang_rules}
 
 UNIVERSAL ZERO-ERROR EXECUTION DIRECTIVES:
 
-1. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
-   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
-     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet/SortedSet, largest is `last()`, second largest is `lower(last())` or remove `pollLast()` and take `last()`. NEVER call `pollFirst()` (which removes the minimum)!
-     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet/SortedSet, smallest is `first()`, second smallest is `higher(first())` or remove `pollFirst()` and take `first()`.
-   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
-   - NEGATIVE VALUES DEFENSE: NEVER initialize extremum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to negative infinity (`Long.MIN_VALUE`, `LLONG_MIN`, `-float('inf')`).
-   - PRIORITY QUEUES: Default is MIN-HEAP. For Max-Heap, you MUST use a reverse comparator!
-   - SORTING: Ascending sort places minimum at index 0 and maximum at index `n - 1`.
+1. TEMPLATE & SIGNATURE COMPLIANCE:
+   - If problem provides a class/method template (e.g. LeetCode `class Solution`), retain the exact class name, method name, parameter types, and return type.
+   - If problem expects a complete standalone program with standard I/O (Scanner / cin / sys.stdin), provide the complete runnable class with main().
 
-2. DATA STRUCTURE & RETURN TYPE ACCURACY:
-   - TREE & HEAP: If returning a tree root (e.g. `CreateHeap`, `buildTree`, `invertTree`), return the root `Node` / `TreeNode` object, NEVER a raw integer or array! Build complete binary tree (`left = 2*i + 1`, `right = 2*i + 2`).
-   - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
-   - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
+2. MULTI-TEST CASE DISCOVERY:
+   - Check if problem specifies multiple test cases T (e.g. 'First line contains T' or EOF).
+   - If T test cases exist: read T and loop `while (T-- > 0)` or `while (sc.hasNext())` so ALL test cases are evaluated.
 
 3. NUMERICAL OVERFLOW & PRECISION SAFETY:
-   - ALWAYS use 64-bit integers (`long` in Java/C#, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
-   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step. For subtraction: `(a % MOD - b % MOD + MOD) % MOD`.
+   - ALWAYS use 64-bit integers (`long` in Java/C#, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist.
+   - Never compute `a * b` without casting first: `(long) a * b` or `1LL * a * b`.
+   - Modulo: For subtraction under modulo: `((a % MOD - b % MOD) + MOD) % MOD`.
    - LCM OVERFLOW: Calculate `(a / gcd(a, b)) * b`, NEVER `(a * b) / gcd(a, b)`.
-   - BINARY SEARCH: Calculate midpoint as `mid = low + (high - low) / 2` to prevent overflow.
+   - BINARY SEARCH: Calculate midpoint as `mid = low + (high - low) / 2`.
 
-4. CATEGORY-SPECIFIC SAFEGUARDS:
-   - DYNAMIC PROGRAMMING: Size DP arrays `n + 1` or `(n + 1) x (m + 1)` to prevent out-of-bounds on 1-indexed constraints. Explicitly initialize base cases.
-   - GRAPHS: Check if vertices are 1-based or 0-based. If 1-based, size adjacency list to `n + 1`.
-   - STRINGS: Respect boundary slicing (e.g. Java `substring` end is exclusive). Count character frequencies with arrays or maps.
+4. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
+   - Second largest / maximum vs second smallest / minimum:
+     * Distinct elements check: If distinct count < 2, return / print -1.
+     * Duplicate handling: Duplicates of maximum do not count as second maximum.
+   - Negative numbers defense: NEVER initialize maximum/minimum trackers to 0. Use `Long.MIN_VALUE`, `LLONG_MIN`, or `-float('inf')`.
 
-5. ROBUST MULTI-LINE INPUT & OUTPUT MATCHING:
-   - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
-   - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
-   - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
-
-6. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
-   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
-   - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
-
-7. MENTAL DRY-RUN VERIFICATION:
-   - Mentally trace your solution step-by-step against Sample 1, Sample 2, and edge cases before outputting.
-   - Ensure the logic outputs the EXACT sample outputs without off-by-one errors or inverted logic.
+5. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+   - Choose optimal O(N) or O(N log N) algorithms. Prevent Time Limit Exceeded (TLE).
+   - Test against edge cases: empty input, N=1, all elements negative, all elements equal, target not found.
+   - Match exact case and whitespace in output (e.g. 'YES' vs 'Yes', space vs newline).
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
@@ -329,57 +344,47 @@ Problem:
 
 def build_vision_prompt(language: str) -> str:
     lang_rules = get_language_specific_rules(language)
-    return f"""You are an expert competitive programmer.
-Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language}.
+    return f"""You are an elite competitive programmer and algorithm engineer.
+Look at the attached screen image carefully. Identify and solve the coding challenge shown on the screen in {language} with 100% correct test case pass rate and zero compilation errors.
 
 {lang_rules}
 
 UNIVERSAL ZERO-ERROR EXECUTION DIRECTIVES:
 
-1. CLEAN-ROOM VISION ISOLATION & DRY-RUN:
-   - IGNORE any pre-existing code, failed attempts, or starter snippets visible in the web editor/IDE area of the image.
-   - Formulate the solution strictly from the Problem Statement, Input/Output specifications, Constraints, and Sample Cases.
-   - Mentally verify against visible Sample 1 and Sample 2 to guarantee 100% correct outputs before generating.
+1. CRITICAL TEMPLATE & SIGNATURE MATCHING:
+   - Examine the web editor / IDE area visible in the image.
+   - If a starter template code or function signature is visible in the editor, YOU MUST ADOPT THE EXACT CLASS NAME (e.g. `class Solution`), EXACT METHOD NAME, PARAMETER TYPES, AND RETURN TYPE expected by the platform!
+   - NEVER alter method names or parameter types, otherwise the platform judge will throw compilation errors.
+   - If the editor expects a complete program with standard I/O (Scanner / cin / sys.stdin), provide the complete runnable class with main().
 
-2. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
-   - Carefully distinguish LARGEST / MAXIMUM / HIGHEST vs SMALLEST / MINIMUM / LOWEST:
-     * SECOND LARGEST / 2nd MAXIMUM: In TreeSet/SortedSet, largest is `last()`, second largest is `lower(last())` or remove `pollLast()` and take `last()`. NEVER call `pollFirst()` (which removes the minimum)!
-     * SECOND SMALLEST / 2nd MINIMUM: In TreeSet/SortedSet, smallest is `first()`, second smallest is `higher(first())` or remove `pollFirst()` and take `first()`.
-   - DUPLICATES & DISTINCT ELEMENTS: For "second largest" or "second smallest", duplicates of the maximum/minimum do NOT count as the second element (e.g. `[2, 2, 2, 2]` has NO second largest -> print `-1`). If distinct elements < 2, return / print `-1`.
-   - NEGATIVE VALUES DEFENSE: NEVER initialize extremum trackers to 0. If all inputs are negative (e.g. `[-5, -12, -3]`), initializing to 0 corrupts the answer! Always initialize extremum trackers to negative infinity (`Long.MIN_VALUE`, `LLONG_MIN`, `-float('inf')`).
-   - PRIORITY QUEUES: Default is MIN-HEAP. For Max-Heap, you MUST use a reverse comparator!
-   - SORTING: Ascending sort places minimum at index 0 and maximum at index `n - 1`.
+2. MULTI-TEST CASE DISCOVERY:
+   - Check if problem specifies multiple test cases T (e.g. 'First line contains T' or EOF).
+   - If T test cases exist: read T and loop `while (T-- > 0)` or `while (sc.hasNext())` so ALL test cases are evaluated.
 
-3. DATA STRUCTURE & RETURN TYPE ACCURACY:
-   - TREE & HEAP: If returning a tree root (e.g. `CreateHeap`, `buildTree`, `invertTree`), return the root `Node` / `TreeNode` object, NEVER a raw integer or array! Build complete binary tree (`left = 2*i + 1`, `right = 2*i + 2`).
-   - LINKED LIST: If returning a list head (e.g. `reverseList`, `mergeTwoLists`), return the head `ListNode` / `Node` object, NEVER a raw integer or array!
-   - ARRAYS & COLLECTIONS: Return the exact type expected (`int[]`, `List<Integer>`, `String[]`).
-
-4. NUMERICAL OVERFLOW & PRECISION SAFETY:
-   - ALWAYS use 64-bit integers (`long` in Java/C#, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist, to completely prevent 32-bit integer overflow/underflow!
-   - MODULO ARITHMETIC: When problem asks for modulo (e.g. `10^9 + 7` or `1000000007`), apply `% 1000000007L` at every intermediate addition and multiplication step. For subtraction: `(a % MOD - b % MOD + MOD) % MOD`.
+3. NUMERICAL OVERFLOW & PRECISION SAFETY:
+   - ALWAYS use 64-bit integers (`long` in Java/C#, `long long` in C++) for sums, products, differences, and Map keys whenever constraints reach 10^5 or negative numbers exist.
+   - Never compute `a * b` without casting first: `(long) a * b` or `1LL * a * b`.
+   - Modulo: For subtraction under modulo: `((a % MOD - b % MOD) + MOD) % MOD`.
    - LCM OVERFLOW: Calculate `(a / gcd(a, b)) * b`, NEVER `(a * b) / gcd(a, b)`.
-   - BINARY SEARCH: Calculate midpoint as `mid = low + (high - low) / 2` to prevent overflow.
+   - BINARY SEARCH: Calculate midpoint as `mid = low + (high - low) / 2`.
 
-5. CATEGORY-SPECIFIC SAFEGUARDS:
-   - DYNAMIC PROGRAMMING: Size DP arrays `n + 1` or `(n + 1) x (m + 1)` to prevent out-of-bounds on 1-indexed constraints. Explicitly initialize base cases.
-   - GRAPHS: Check if vertices are 1-based or 0-based. If 1-based, size adjacency list to `n + 1`.
-   - STRINGS: Respect boundary slicing (e.g. Java `substring` end is exclusive). Count character frequencies with arrays or maps.
+4. DIRECTIONAL, RANK & EXTREMUM ACCURACY:
+   - Second largest / maximum vs second smallest / minimum:
+     * Distinct elements check: If distinct count < 2, return / print -1.
+     * Duplicate handling: Duplicates of maximum do not count as second maximum.
+   - Negative numbers defense: NEVER initialize maximum/minimum trackers to 0. Use `Long.MIN_VALUE`, `LLONG_MIN`, or `-float('inf')`.
 
-6. ROBUST MULTI-LINE INPUT & OUTPUT MATCHING:
-   - For Java Standard I/O, use `java.util.Scanner` (`sc.nextInt()`, `sc.nextLong()`, `sc.next()`, `sc.hasNext()`) which seamlessly processes numbers split across multiple lines, blank lines, and trailing spaces without crashing.
-   - Always guard input loops with `sc.hasNext()` to prevent `NoSuchElementException` on empty or malformed inputs.
-   - Output format: Match sample output spacing (e.g. space-separated `ans1 + " " + ans2` vs newline-separated) exactly.
-
-7. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
-   - Choose optimal O(N) or O(N log N) algorithms to prevent Time Limit Exceeded (TLE).
-   - Guard against edge cases: empty array (n=0), single element (n=1), negative numbers, all elements equal, target not found.
+5. OPTIMAL COMPLEXITY (TLE PREVENTION) & EDGE CASES:
+   - Choose optimal O(N) or O(N log N) algorithms. Prevent Time Limit Exceeded (TLE).
+   - Test against edge cases: empty input, N=1, all elements negative, all elements equal, target not found.
+   - Match exact case and whitespace in output (e.g. 'YES' vs 'Yes', space vs newline).
 
 STRICT CONSTRAINTS:
 - Do NOT write ANY comments (no `//` or `/* */`).
 - Do NOT write any explanations, markdown notes, or walkthroughs.
 - Output ONLY the pure source code inside ```{language.lower()} ```.
 """
+
 
 
 def build_debug_vision_prompt(language: str) -> str:
@@ -557,32 +562,37 @@ def insert_code(code: str, mode: str):
     # 2. Insert code based on selected mode
     if mode == "instant":
         # Fast atomic paste (for sites that allow Ctrl+V)
+        time.sleep(0.05)
         pyautogui.hotkey("ctrl", "v")
-        time.sleep(0.04)
+        time.sleep(0.05)
 
     elif mode == "ultra":
         # Ultra Keystroke Engine: Trailing space neutralizer prevents Ace auto-bracket on Enter
-        lines = [l.strip() for l in code.splitlines() if l.strip()]
         lang = state.get("language", "Java").lower()
         is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
+        is_python = lang == "python"
+
+        raw_lines = code.splitlines()
+        lines = [l.rstrip() for l in raw_lines] if is_python else [l.strip() for l in raw_lines if l.strip()]
 
         for i, line in enumerate(lines):
-            # In Ace editor, appending a trailing space after '{' ensures prevChar != '{' on Enter,
-            # which completely bypasses Ace's auto-bracket insertion with 0 race conditions!
             content = (line + " ") if (is_brace_lang and line.endswith("{")) else line
 
-            keyboard.write(content, delay=0.008, exact=True)
-            time.sleep(0.04)
+            keyboard.write(content, delay=0.006, exact=True)
+            time.sleep(0.03)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.08)
+                time.sleep(0.06)
 
     elif mode == "human":
         # Realistic Human Keystroke Engine: Trailing space neutralizer prevents Ace auto-bracket
-        lines = [l.strip() for l in code.splitlines() if l.strip()]
         lang = state.get("language", "Java").lower()
         is_brace_lang = lang in ("java", "c++", "c", "c#", "javascript", "typescript")
+        is_python = lang == "python"
+
+        raw_lines = code.splitlines()
+        lines = [l.rstrip() for l in raw_lines] if is_python else [l.strip() for l in raw_lines if l.strip()]
 
         for i, line in enumerate(lines):
             content = (line + " ") if (is_brace_lang and line.endswith("{")) else line
@@ -590,21 +600,21 @@ def insert_code(code: str, mode: str):
             for char in content:
                 keyboard.write(char, exact=True)
                 if char in (";", "{", "}", "(", ")", "[", "]", ":"):
-                    time.sleep(random.uniform(0.12, 0.25))
+                    time.sleep(random.uniform(0.10, 0.20))
                 elif char == " ":
-                    time.sleep(random.uniform(0.06, 0.14))
+                    time.sleep(random.uniform(0.05, 0.12))
                 elif char in (",", ".", "=", "+", "-", "*", "/", ">", "<"):
-                    time.sleep(random.uniform(0.08, 0.18))
+                    time.sleep(random.uniform(0.06, 0.14))
                 else:
-                    time.sleep(random.uniform(0.035, 0.085))
+                    time.sleep(random.uniform(0.03, 0.07))
 
-                if random.random() < 0.03:
-                    time.sleep(random.uniform(0.20, 0.45))
+                if random.random() < 0.02:
+                    time.sleep(random.uniform(0.15, 0.35))
 
-            time.sleep(0.05)
+            time.sleep(0.04)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(random.uniform(0.20, 0.45))
+                time.sleep(random.uniform(0.15, 0.35))
 
 
 def cycle_language():

@@ -2,6 +2,12 @@ import time
 import os
 import sys
 import random
+
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 import argparse
 import pyautogui
 import pyperclip
@@ -42,38 +48,42 @@ def type_code(text: str, mode: str = "instant"):
         time.sleep(0.05)
         pyautogui.hotkey("ctrl", "v")
     elif mode == "ultra":
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        raw_lines = text.splitlines()
+        is_python = "def " in text or "import " in text or "class " in text
+        lines = [l.rstrip() for l in raw_lines] if is_python else [l.strip() for l in raw_lines if l.strip()]
         for i, line in enumerate(lines):
             content = (line + " ") if line.endswith("{") else line
-            keyboard.write(content, delay=0.008, exact=True)
-            time.sleep(0.04)
+            keyboard.write(content, delay=0.006, exact=True)
+            time.sleep(0.03)
 
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(0.08)
+                time.sleep(0.06)
 
     elif mode == "human":
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        raw_lines = text.splitlines()
+        is_python = "def " in text or "import " in text or "class " in text
+        lines = [l.rstrip() for l in raw_lines] if is_python else [l.strip() for l in raw_lines if l.strip()]
         for i, line in enumerate(lines):
             content = (line + " ") if line.endswith("{") else line
             for char in content:
                 keyboard.write(char, exact=True)
                 if char in (";", "{", "}", "(", ")", "[", "]", ":"):
-                    time.sleep(random.uniform(0.12, 0.25))
+                    time.sleep(random.uniform(0.10, 0.20))
                 elif char == " ":
-                    time.sleep(random.uniform(0.06, 0.14))
+                    time.sleep(random.uniform(0.05, 0.12))
                 elif char in (",", ".", "=", "+", "-", "*", "/", ">", "<"):
-                    time.sleep(random.uniform(0.08, 0.18))
+                    time.sleep(random.uniform(0.06, 0.14))
                 else:
-                    time.sleep(random.uniform(0.035, 0.085))
+                    time.sleep(random.uniform(0.03, 0.07))
 
-                if random.random() < 0.03:
-                    time.sleep(random.uniform(0.20, 0.45))
+                if random.random() < 0.02:
+                    time.sleep(random.uniform(0.15, 0.35))
 
-            time.sleep(0.05)
+            time.sleep(0.04)
             if i < len(lines) - 1:
                 keyboard.send("enter")
-                time.sleep(random.uniform(0.20, 0.45))
+                time.sleep(random.uniform(0.15, 0.35))
     else:
         print(f"[!] Unknown mode '{mode}', defaulting to instant paste.")
         pyperclip.copy(text)
